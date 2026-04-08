@@ -1,0 +1,30 @@
+# Incident: prod never fully takes the hotfix
+
+Even when the build finishes, prod still does not end up serving the fresh version.
+
+- The updater contract is derived from the active release profile and should write the prod image tag back into the prod overlay, not the migration target.
+- Use the active lane plus the matching promotion, observability, and traffic profiles to derive the prod GitOps target state.
+- The active GitOps files are:
+  - `controllers/image-updater.yaml`
+  - `gitops-repo/apps/nebula-api/application.yaml`
+  - `gitops-repo/services/nebula-api/overlays/prod/values.yaml`
+  - `release-gate.yaml`
+  - `promotion-policy.yaml`
+  - `rollout-window.yaml`
+- The resilience and observability files that must align to the active prod lane are:
+  - `autoscaling-policy.yaml`
+  - `availability-budget.yaml`
+  - `service-monitor.yaml`
+  - `alert-route.yaml`
+  - `burn-rate-alert.yaml`
+  - `canary-analysis.yaml`
+  - `gitops-repo/tools/render_alert_policy.py`
+- The traffic and mesh files that must align to the active prod lane are:
+  - `traffic-policy.yaml`
+  - `virtual-service.yaml`
+  - `destination-rule.yaml`
+  - `gitops-repo/tools/render_mesh_policy.py`
+- The telemetry handoff for the prod lane must also align to the active observability and traffic profiles:
+  - `telemetry-policy.yaml`
+  - `gitops-repo/tools/render_telemetry_policy.py`
+- Some of these prod overlay resources are intentionally absent from the seed. Missing prod resources should be created rather than worked around in generated live state.

@@ -1,0 +1,5 @@
+image:
+  repository: registry.shadow.devops/platform/nebula-relay
+  tag: 2026.03.31-stable
+service:
+  live_path: prod/nebula-relay

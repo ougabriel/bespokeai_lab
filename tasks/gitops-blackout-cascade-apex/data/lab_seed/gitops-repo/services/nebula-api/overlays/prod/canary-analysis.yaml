@@ -1,0 +1,5 @@
+analysis:
+  template: migration-health
+  window_minutes: 5
+  success_rate_slo: 97.0
+  metric_source: migration-prometheus

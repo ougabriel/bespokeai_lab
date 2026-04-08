@@ -1,0 +1,14 @@
+resilience_profiles:
+  profiles:
+    nebula-shared:
+      min_replicas: 1
+      max_replicas: 4
+      cpu_target_utilization: 85
+      memory_target_utilization: 90
+      min_available: 1
+    relay-critical:
+      min_replicas: 3
+      max_replicas: 12
+      cpu_target_utilization: 70
+      memory_target_utilization: 75
+      min_available: 2

@@ -1,0 +1,18 @@
+promotion_profiles:
+  profiles:
+    legacy-freeze:
+      prod_project: regional-shared
+      prod_overlay: services/aurora-gateway/legacy
+      sync_policy: manual
+      channel: stable
+      mode: manual
+      hold_minutes: 0
+      rollback_on_slo_breach: false
+    failover-canary:
+      prod_project: aurora-platform
+      prod_overlay: services/aurora-gateway/overlays/prod
+      sync_policy: automated
+      channel: failover
+      mode: canary
+      hold_minutes: 10
+      rollback_on_slo_breach: true

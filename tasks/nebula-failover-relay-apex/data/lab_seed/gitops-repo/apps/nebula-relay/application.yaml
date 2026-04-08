@@ -1,0 +1,6 @@
+application:
+  service: nebula-relay
+  namespace: prod
+  project: nebula-shared
+  source_path: services/nebula-relay/legacy
+  sync_policy: manual

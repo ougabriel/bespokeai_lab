@@ -1,0 +1,16 @@
+release_profiles:
+  profiles:
+    migration-fallback:
+      required_runner_profile: shared-shell
+      target_branch: release-prod
+      tag_source: build_number
+      registry_host: registry.service.devops
+      write_back_target: app-repo
+      write_back_branch: release-prod
+    prod-mainline:
+      required_runner_profile: socket-local
+      target_branch: main
+      tag_source: git_sha
+      registry_host: registry.internal.devops
+      write_back_target: gitops-repo
+      write_back_branch: main

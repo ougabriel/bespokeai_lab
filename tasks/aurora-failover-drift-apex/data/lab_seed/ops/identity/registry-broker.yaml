@@ -1,0 +1,21 @@
+broker:
+  secret_name: failover-bot
+  active_profile: prod
+  profiles:
+    archive:
+      username: aurora-pusher
+      token_parts:
+        - aurora
+        - archive
+        - read
+      scopes:
+        - pull
+    prod:
+      username: aurora-pusher
+      token_parts:
+        - aurora
+        - prod
+        - write
+      scopes:
+        - push
+        - pull

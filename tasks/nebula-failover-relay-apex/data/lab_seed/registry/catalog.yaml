@@ -1,0 +1,3 @@
+images:
+  registry.internal.devops/platform/nebula-relay:
+    - 2026.03.31-stable

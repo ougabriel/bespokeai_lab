@@ -1,0 +1,5 @@
+release_plan:
+  required_runner_profile: socket-dr
+  target_branch: main
+  tag_source: release_train
+  artifact_repository: registry.shadow.devops/platform/nebula-relay

@@ -1,0 +1,5 @@
+release_plan:
+  required_runner_profile: socket-local
+  target_branch: main
+  tag_source: release_train
+  artifact_repository: registry.service.devops/platform/nebula-api

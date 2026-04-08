@@ -1,0 +1,7 @@
+promotion:
+  channel: stable
+  strategy: manual
+  freeze: true
+  target_branch: release-relay
+  target_overlay: services/nebula-relay/legacy
+  analysis_template: shadow-health

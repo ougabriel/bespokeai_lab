@@ -1,0 +1,4 @@
+service: nebula-relay
+branch: release-relay
+artifact_repository: registry.shadow.devops/platform/nebula-relay
+current_commit: 2026.03.31-stable

@@ -1,0 +1,3 @@
+images:
+  registry.internal.devops/platform/aurora-gateway:
+    - 2026.03.31-stable

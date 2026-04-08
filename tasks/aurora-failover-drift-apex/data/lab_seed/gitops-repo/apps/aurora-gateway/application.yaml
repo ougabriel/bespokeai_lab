@@ -1,0 +1,6 @@
+application:
+  service: aurora-gateway
+  namespace: prod
+  project: regional-shared
+  source_path: services/aurora-gateway/legacy
+  sync_policy: manual

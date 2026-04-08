@@ -1,0 +1,12 @@
+paths:
+  lab_seed_root: /app/data/lab_seed
+  lab_root: /app/state/lab
+  docs_root: /app/data/docs
+
+api:
+  host: 127.0.0.1
+  port: 8113
+
+release:
+  service_name: aurora-gateway
+  registry_host: registry.internal.devops

@@ -1,0 +1,5 @@
+alert_route:
+  receiver: shadow-slack
+  severity: warning
+  service: nebula-relay-legacy
+  metric_source: shadow-prometheus

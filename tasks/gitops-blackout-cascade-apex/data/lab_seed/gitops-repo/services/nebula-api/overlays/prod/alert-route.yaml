@@ -1,0 +1,5 @@
+alert_route:
+  receiver: migration-slack
+  severity: warning
+  service: nebula-api-legacy
+  metric_source: migration-prometheus

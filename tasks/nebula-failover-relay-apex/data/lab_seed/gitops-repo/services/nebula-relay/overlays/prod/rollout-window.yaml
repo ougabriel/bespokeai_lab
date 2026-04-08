@@ -1,0 +1,8 @@
+window:
+  lane: release-relay
+  freeze: true
+  require_analysis: false
+  hold_minutes: 0
+  rollback_on_slo_breach: false
+  progressive_steps:
+    - 100

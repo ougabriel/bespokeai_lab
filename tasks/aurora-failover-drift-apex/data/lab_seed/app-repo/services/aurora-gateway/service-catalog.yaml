@@ -1,0 +1,6 @@
+service:
+  name: aurora-gateway
+  tracked_service: aurora-gateway
+  traffic_service: aurora-gateway
+  image_repo: platform/aurora-gateway
+  health_path: /internal/ready

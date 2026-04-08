@@ -1,0 +1,6 @@
+service:
+  name: nebula-relay
+  tracked_service: nebula-relay
+  traffic_service: nebula-relay
+  image_repo: platform/nebula-relay
+  health_path: /internal/ready

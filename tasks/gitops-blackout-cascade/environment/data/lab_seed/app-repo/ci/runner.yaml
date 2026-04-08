@@ -1,0 +1,5 @@
+runner:
+  docker_host: tcp://docker:2375
+  expected_socket: unix:///var/run/docker.sock
+  profile: legacy-dind
+  pipeline_name: nebula-api-release

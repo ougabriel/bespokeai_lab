@@ -1,0 +1,9 @@
+traffic:
+  gateway_host: edge.shadow.internal.devops
+  gateway_class: shared-edge
+  route_prefix: /nebula
+  service: nebula-relay-legacy
+  analysis_template: shadow-health
+  progressive_steps:
+    - 25
+    - 100

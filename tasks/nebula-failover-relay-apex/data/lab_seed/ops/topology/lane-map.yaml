@@ -1,0 +1,9 @@
+lane_map:
+  active_lane: prod-dr
+  lanes:
+    prod-dr:
+      release_profile: relay-mainline
+      resilience_profile: relay-critical
+      promotion_profile: relay-canary
+      observability_profile: slo-diamond
+      traffic_profile: mesh-prod-dr

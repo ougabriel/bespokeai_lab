@@ -1,0 +1,18 @@
+promotion_profiles:
+  profiles:
+    legacy-manual:
+      prod_project: shared-services
+      prod_overlay: services/nebula-api/legacy
+      sync_policy: manual
+      channel: stable
+      mode: manual
+      hold_minutes: 0
+      rollback_on_slo_breach: false
+    hotfix-canary:
+      prod_project: platform-prod
+      prod_overlay: services/nebula-api/overlays/prod
+      sync_policy: automated
+      channel: hotfix
+      mode: canary
+      hold_minutes: 10
+      rollback_on_slo_breach: true

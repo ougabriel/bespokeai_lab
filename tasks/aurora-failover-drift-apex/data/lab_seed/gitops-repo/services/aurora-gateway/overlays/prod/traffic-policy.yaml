@@ -1,0 +1,9 @@
+traffic:
+  gateway_host: edge.migration.internal.devops
+  gateway_class: shared-edge
+  route_prefix: /aurora
+  service: aurora-gateway-legacy
+  analysis_template: migration-health
+  progressive_steps:
+    - 25
+    - 100

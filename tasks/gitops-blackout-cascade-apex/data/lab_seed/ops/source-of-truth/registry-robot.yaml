@@ -1,0 +1,6 @@
+name: release-bot
+username: nebula-pusher
+token: stale-nebula-token
+scopes:
+  - push
+  - pull

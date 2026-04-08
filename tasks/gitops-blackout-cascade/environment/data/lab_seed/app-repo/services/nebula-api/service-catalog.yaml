@@ -1,0 +1,6 @@
+service:
+  name: nebula-api
+  tracked_service: nebula-api
+  traffic_service: nebula-api
+  image_repo: platform/nebula-api
+  health_path: /internal/ready

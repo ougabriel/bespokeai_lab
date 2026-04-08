@@ -1,0 +1,5 @@
+image:
+  repository: registry.backplane.devops/platform/aurora-gateway
+  tag: 2026.03.31-stable
+service:
+  live_path: prod/aurora-gateway

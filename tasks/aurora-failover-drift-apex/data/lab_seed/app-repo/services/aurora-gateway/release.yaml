@@ -1,0 +1,4 @@
+service: aurora-gateway
+branch: release-failover
+artifact_repository: registry.backplane.devops/platform/aurora-gateway
+current_commit: 2026.03.31-stable

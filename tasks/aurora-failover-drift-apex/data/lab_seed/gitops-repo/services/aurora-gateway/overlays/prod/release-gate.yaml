@@ -1,0 +1,4 @@
+gate:
+  allowed_channels:
+    - stable
+  promotion_mode: manual

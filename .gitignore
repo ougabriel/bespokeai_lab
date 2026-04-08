@@ -1,0 +1,9 @@
+report.json
+.validation/
+eval_results.json
+eval_transcripts/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db

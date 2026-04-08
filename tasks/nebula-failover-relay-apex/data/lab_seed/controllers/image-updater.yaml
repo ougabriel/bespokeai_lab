@@ -1,0 +1,6 @@
+updater:
+  tracked_service: nebula-relay
+  auth_secret: cluster/live/secrets/legacy-registry-robot.yaml
+  write_back_target: app-repo
+  write_back_branch: release-relay
+  manifest_path: services/nebula-relay/legacy/values.yaml

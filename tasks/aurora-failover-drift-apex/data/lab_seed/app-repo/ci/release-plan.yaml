@@ -1,0 +1,5 @@
+release_plan:
+  required_runner_profile: socket-fleet
+  target_branch: main
+  tag_source: release_train
+  artifact_repository: registry.backplane.devops/platform/aurora-gateway

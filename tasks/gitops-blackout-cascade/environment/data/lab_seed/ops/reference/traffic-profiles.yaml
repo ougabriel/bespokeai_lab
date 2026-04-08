@@ -1,0 +1,19 @@
+traffic_profiles:
+  profiles:
+    shared-edge-legacy:
+      gateway_host: edge.migration.internal.devops
+      gateway_class: shared-edge
+      route_prefix: /nebula
+      propagation_header: x-release-track
+      progressive_steps:
+        - 25
+        - 100
+    mesh-prod-eu:
+      gateway_host: edge.prod.internal.devops
+      gateway_class: internal-mesh
+      route_prefix: /nebula-api
+      propagation_header: x-nebula-lane
+      progressive_steps:
+        - 10
+        - 50
+        - 100

@@ -1,0 +1,13 @@
+telemetry:
+  service: nebula-api-legacy
+  namespace: observability-shared
+  provider: migration-otel
+  metric_source: migration-prometheus
+  gateway_class: shared-edge
+  route_prefix: /nebula
+  lane: release-prod
+  trace_sampling_percent: 1
+  propagation_header: x-release-track
+  propagation_value: migration
+  live_commit: 2026.03.31-stable
+  status: Drifted

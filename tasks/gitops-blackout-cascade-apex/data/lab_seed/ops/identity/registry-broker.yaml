@@ -1,0 +1,21 @@
+broker:
+  secret_name: release-bot
+  active_profile: prod
+  profiles:
+    archive:
+      username: nebula-pusher
+      token_parts:
+        - nebula
+        - archive
+        - read
+      scopes:
+        - pull
+    prod:
+      username: nebula-pusher
+      token_parts:
+        - nebula
+        - prod
+        - write
+      scopes:
+        - push
+        - pull

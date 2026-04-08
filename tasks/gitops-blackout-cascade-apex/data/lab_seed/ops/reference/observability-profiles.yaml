@@ -1,0 +1,30 @@
+observability_profiles:
+  profiles:
+    migration-bronze:
+      analysis_template: migration-health
+      analysis_window_minutes: 5
+      success_rate_slo: 97.0
+      metric_source: migration-prometheus
+      telemetry_provider: migration-otel
+      trace_sampling_percent: 1
+      burn_rate_short_window: 15m
+      burn_rate_long_window: 1h
+      error_budget_burn_rate: 6.0
+      monitor_namespace: observability-shared
+      monitor_interval: 2m
+      alert_receiver: migration-slack
+      alert_severity: warning
+    slo-gold:
+      analysis_template: prod-error-budget
+      analysis_window_minutes: 15
+      success_rate_slo: 99.5
+      metric_source: prod-prometheus
+      telemetry_provider: prod-otel
+      trace_sampling_percent: 5
+      burn_rate_short_window: 5m
+      burn_rate_long_window: 30m
+      error_budget_burn_rate: 2.0
+      monitor_namespace: observability-prod
+      monitor_interval: 30s
+      alert_receiver: prod-platform-pager
+      alert_severity: critical

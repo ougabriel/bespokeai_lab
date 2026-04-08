@@ -1,0 +1,30 @@
+observability_profiles:
+  profiles:
+    regional-bronze:
+      analysis_template: shadow-health
+      analysis_window_minutes: 5
+      success_rate_slo: 97.0
+      metric_source: shadow-prometheus
+      telemetry_provider: shadow-otel
+      trace_sampling_percent: 1
+      burn_rate_short_window: 15m
+      burn_rate_long_window: 1h
+      error_budget_burn_rate: 6.0
+      monitor_namespace: observability-shared
+      monitor_interval: 2m
+      alert_receiver: shadow-slack
+      alert_severity: warning
+    slo-diamond:
+      analysis_template: nebula-dr-error-budget
+      analysis_window_minutes: 15
+      success_rate_slo: 99.5
+      metric_source: nebula-dr-prometheus
+      telemetry_provider: nebula-dr-otel
+      trace_sampling_percent: 5
+      burn_rate_short_window: 5m
+      burn_rate_long_window: 30m
+      error_budget_burn_rate: 2.0
+      monitor_namespace: observability-nebula-dr
+      monitor_interval: 30s
+      alert_receiver: nebula-dr-pager
+      alert_severity: critical

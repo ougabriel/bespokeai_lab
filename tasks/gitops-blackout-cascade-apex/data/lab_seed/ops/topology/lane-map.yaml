@@ -1,0 +1,9 @@
+lane_map:
+  active_lane: prod-eu
+  lanes:
+    prod-eu:
+      release_profile: prod-mainline
+      resilience_profile: prod-critical
+      promotion_profile: hotfix-canary
+      observability_profile: slo-gold
+      traffic_profile: mesh-prod-eu

@@ -1,0 +1,9 @@
+database:
+  path: /app/state/tenant_ops.sqlite3
+
+inputs:
+  job_runs_path: /app/data/job_runs.jsonl
+
+api:
+  host: 127.0.0.1
+  port: 8107

@@ -1,0 +1,128 @@
+# Schema Guide
+
+The active production lane is not guessed from the tests. It is derived from the seeded contract under `/app/data/lab_seed`.
+Use `/app/data/docs/repair-checklist.md` for the short-form recovery order and this file for the field-level schema details.
+
+Use this chain when deciding what "prod" means:
+
+1. `ops/topology/lane-map.yaml` selects the active lane and the profile names for release, resilience, promotion, observability, and traffic.
+2. `ops/reference/*.yaml` defines the canonical settings for those profiles.
+3. `app-repo/services/nebula-relay/service-catalog.yaml` defines the service name, image repo suffix, and health path used by prod resources.
+
+The derived handoff manifests use the compact contract label `<lane>.<channel>.<service>`.
+
+The seeded files are grouped by responsibility:
+
+- CI and release metadata:
+  - `app-repo/ci/runner.yaml`
+    Top-level key: `runner`
+    Important fields: `docker_host`, `expected_socket`, `profile`, `pipeline_name`
+  - `app-repo/ci/release-plan.yaml`
+    Top-level key: `release_plan`
+    Important fields: `required_runner_profile`, `target_branch`, `tag_source`, `artifact_repository`
+  - `app-repo/services/nebula-relay/release.yaml`
+    Important fields: `service`, `branch`, `artifact_repository`, `current_commit`
+  - `app-repo/services/nebula-relay/release-contract.yaml`
+    Top-level key: `contract`
+    Important fields: `service`, `tracked_service`, `traffic_service`, `lane`, `target_branch`, `write_back_branch`, `target_overlay`, `image_repository`, `health_path`, `contract_label`
+  - `app-repo/services/nebula-relay/release-baton.yaml`
+    Top-level key: `baton`
+    Important fields: `service`, `tracked_service`, `lane`, `write_back_target`, `write_back_branch`, `target_overlay`, `contract_label`
+  - `app-repo/services/nebula-relay/release-attestation.yaml`
+    Top-level key: `attestation`
+    Important fields: `service`, `lane`, `target_branch`, `write_back_target`, `write_back_branch`, `image_repository`, `contract_label`
+  - `app-repo/ci/scripts/render_release_bundle.py`
+    Must emit a bundle whose branch, channel, tag source, image repository, derived overlay target, and contract label match the active release contract.
+  - `app-repo/ci/scripts/render_release_attestation.py`
+    Must emit release attestation JSON whose lane, target branch, write-back target, repository, tracked service, and contract label match the active release contract.
+
+- Registry and automation:
+  - `ops/source-of-truth/registry-robot.yaml`
+    Important fields: `name`, `username`, `token`, `scopes`
+  - `controllers/image-updater.yaml`
+    Top-level key: `updater`
+    Important fields: `tracked_service`, `auth_secret`, `write_back_target`, `write_back_branch`, `manifest_path`
+
+- GitOps and promotion:
+  - `gitops-repo/apps/nebula-relay/application.yaml`
+    Top-level key: `application`
+    Important fields: `service`, `namespace`, `project`, `source_path`, `sync_policy`
+  - `gitops-repo/services/nebula-relay/overlays/prod/values.yaml`
+    Important fields: `image.repository`, `image.tag`, `service.live_path`
+  - `release-gate.yaml`
+    Top-level key: `gate`
+    Important fields: `allowed_channels`, `promotion_mode`
+  - `promotion-policy.yaml`
+    Top-level key: `promotion`
+    Important fields: `channel`, `strategy`, `freeze`, `target_branch`, `target_overlay`, `analysis_template`
+  - `rollout-window.yaml`
+    Top-level key: `window`
+    Important fields: `lane`, `freeze`, `require_analysis`, `hold_minutes`, `rollback_on_slo_breach`, `progressive_steps`
+  - `delivery-contract.yaml`
+    Top-level key: `contract`
+    Important fields: `lane`, `channel`, `mode`, `target_overlay`, `analysis_template`, `metric_source`, `monitor_namespace`, `gateway_host`, `gateway_class`, `route_prefix`, `contract_label`
+  - `observability-handoff.yaml`
+    Top-level key: `handoff`
+    Important fields: `service`, `lane`, `analysis_template`, `metric_source`, `monitor_namespace`, `receiver`, `severity`, `contract_label`
+  - `analysis-handoff.yaml`
+    Top-level key: `handoff`
+    Important fields: `service`, `lane`, `analysis_template`, `window_minutes`, `success_rate_slo`, `metric_source`, `contract_label`
+
+- Resilience and observability:
+  - `autoscaling-policy.yaml`
+    Top-level key: `autoscaling`
+    Important fields: `service`, `min_replicas`, `max_replicas`, `cpu_target_utilization`, `memory_target_utilization`
+  - `availability-budget.yaml`
+    Top-level key: `budget`
+    Important fields: `service`, `lane`, `min_available`
+  - `service-monitor.yaml`
+    Top-level key: `monitor`
+    Important fields: `service`, `namespace`, `path`, `interval`
+  - `alert-route.yaml`
+    Top-level key: `alert_route`
+    Important fields: `receiver`, `severity`, `service`, `metric_source`
+  - `burn-rate-alert.yaml`
+    Top-level key: `burn_rate`
+    Important fields: `service`, `metric_source`, `short_window`, `long_window`, `max_burn_rate`
+  - `canary-analysis.yaml`
+    Top-level key: `analysis`
+    Important fields: `template`, `window_minutes`, `success_rate_slo`, `metric_source`
+  - `gitops-repo/tools/render_alert_policy.py`
+    Must emit alert policy JSON that matches the active observability profile and the active delivery handoff manifest.
+  - `gitops-repo/tools/render_analysis_handoff.py`
+    Must emit analysis handoff JSON whose template, window, SLO, metric source, receiver, severity, and contract label match the active prod observability contract.
+
+- Traffic, mesh, and telemetry:
+  - `traffic-policy.yaml`
+    Top-level key: `traffic`
+    Important fields: `service`, `gateway_host`, `gateway_class`, `route_prefix`, `progressive_steps`
+  - `traffic-intent.yaml`
+    Top-level key: `intent`
+    Important fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `progressive_steps`, `contract_label`
+  - `route-contract.yaml`
+    Top-level key: `contract`
+    Important fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `live_path`, `contract_label`
+  - `virtual-service.yaml`
+    Top-level key: `virtual_service`
+    Important fields: `service`, `hosts`, `http`, route destinations, subset weights
+  - `destination-rule.yaml`
+    Top-level key: `destination_rule`
+    Important fields: `service`, `host`, `subsets`
+  - `mesh-intent.yaml`
+    Top-level key: `intent`
+    Important fields: `service`, `lane`, `service_host`, `subsets`, `contract_label`
+  - `workload-intent.yaml`
+    Top-level key: `intent`
+    Important fields: `service`, `lane`, `namespace`, `image_repository`, `health_path`, `live_path`, `contract_label`
+  - `telemetry-policy.yaml`
+    Top-level key: `telemetry`
+    Important fields: `service`, `namespace`, `provider`, `metric_source`, `gateway_class`, `route_prefix`, `lane`, `trace_sampling_percent`, `propagation_header`, `propagation_value`
+  - `telemetry-handoff.yaml`
+    Top-level key: `handoff`
+    Important fields: `service`, `service_host`, `provider`, `metric_source`, `gateway_class`, `route_prefix`, `propagation_header`, `propagation_value`, `contract_label`
+  - `gitops-repo/tools/render_mesh_policy.py`
+    Must emit mesh policy JSON whose host, gateway fields, subsets, and contract label match the active traffic contract.
+  - `gitops-repo/tools/render_telemetry_policy.py`
+    Must emit telemetry handoff JSON whose provider, service host, propagation header, lane value, and contract label match the active traffic and observability contract.
+
+Files under `cluster/live/` and generated state under `/app/state/` are rollout outputs, not the durable source-of-truth. If a change only fixes generated state, the next bootstrap or rollout will revert it.

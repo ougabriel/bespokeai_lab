@@ -1,0 +1,11 @@
+route:
+  service: nebula-api-legacy
+  gateway_host: edge.migration.internal.devops
+  gateway_class: shared-edge
+  route_prefix: /nebula
+  analysis_template: migration-health
+  progressive_steps:
+    - 25
+    - 100
+  live_commit: 2026.03.31-stable
+  status: Degraded

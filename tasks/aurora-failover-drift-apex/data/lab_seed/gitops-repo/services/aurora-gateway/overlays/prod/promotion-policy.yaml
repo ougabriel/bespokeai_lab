@@ -1,0 +1,7 @@
+promotion:
+  channel: stable
+  strategy: manual
+  freeze: true
+  target_branch: release-failover
+  target_overlay: services/aurora-gateway/legacy
+  analysis_template: migration-health

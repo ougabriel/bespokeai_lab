@@ -1,0 +1,9 @@
+lane_map:
+  active_lane: dr-eu
+  lanes:
+    dr-eu:
+      release_profile: dr-mainline
+      resilience_profile: dr-critical
+      promotion_profile: failover-canary
+      observability_profile: slo-diamond
+      traffic_profile: mesh-dr-eu

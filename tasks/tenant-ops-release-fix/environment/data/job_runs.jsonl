@@ -1,0 +1,15 @@
+{"job_id":"job-100","tenant":"acme","started_at":"2026-02-03T08:00:00Z","finished_at":"2026-02-03T08:00:30Z","attempt_number":1,"status":"FAILED"}
+{"job_id":"job-100","tenant":"acme","started_at":"2026-02-03T08:05:00Z","finished_at":"2026-02-03T08:05:40Z","attempt_number":2,"status":" SUCCESS "}
+{"job_id":"job-101","tenant":"acme","started_at":"2026-02-03T09:00:00Z","finished_at":"2026-02-03T09:00:41Z","attempt_number":1,"status":"success"}
+{"job_id":"job-101","tenant":"acme","started_at":"2026-02-04T07:30:00Z","finished_at":"2026-02-04T07:30:20Z","attempt_number":2,"status":" failed "}
+{"job_id":"job-102","tenant":"acme","started_at":"2026-02-03T10:00:00Z","finished_at":"2026-02-03T10:00:12Z","attempt_number":1,"status":"FAILED"}
+{"job_id":"job-103","tenant":"zephyr","started_at":"2026-02-03T11:00:00Z","finished_at":"2026-02-03T11:00:20Z","attempt_number":1,"status":"FAILED"}
+{"job_id":"job-103","tenant":"zephyr","started_at":"2026-02-03T11:03:00Z","finished_at":"2026-02-03T11:03:22Z","attempt_number":2,"status":"SUCCESS"}
+{"job_id":"job-104","tenant":"zephyr","started_at":"2026-02-03T12:00:00Z","finished_at":"2026-02-03T12:00:19Z","attempt_number":1,"status":" failed "}
+{"job_id":"job-100","tenant":"zephyr","started_at":"2026-02-03T12:10:00Z","finished_at":"2026-02-03T12:10:10Z","attempt_number":1,"status":" SUCCESS "}
+{"job_id":"job-200","tenant":"acme","started_at":"2026-02-02T23:59:45Z","finished_at":"2026-02-03T00:00:15Z","attempt_number":1,"status":"SUCCESS"}
+{"job_id":"job-201","tenant":"acme","started_at":"2026-02-04T00:00:00Z","finished_at":"2026-02-04T00:00:18Z","attempt_number":1,"status":"SUCCESS"}
+{"job_id":"job-105","tenant":"acme","started_at":"2026-02-03T13:00:00Z","finished_at":"2026-02-03T13:00:15Z","attempt_number":8,"status":" FAILED "}
+{"job_id":"job-105","tenant":"acme","started_at":"2026-02-03T13:05:00Z","finished_at":"2026-02-03T13:05:25Z","attempt_number":2,"status":" Success "}
+{"job_id":"job-106","tenant":"acme","started_at":"2026-02-03T14:00:00Z","finished_at":"2026-02-03T14:00:20Z","attempt_number":1,"status":" success "}
+{"job_id":"job-106","tenant":"acme","started_at":"2026-02-03T13:59:50Z","finished_at":"2026-02-03T14:00:20Z","attempt_number":2,"status":" FAILED "}

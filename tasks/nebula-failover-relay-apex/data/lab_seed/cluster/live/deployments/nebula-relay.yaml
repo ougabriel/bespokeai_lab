@@ -1,0 +1,8 @@
+deployment:
+  service: nebula-relay
+  namespace: prod
+  image: registry.internal.devops/platform/nebula-relay:2026.03.31-stable
+  status: Degraded
+  sync_status: OutOfSync
+  live_commit: 2026.03.31-stable
+  source_path: services/nebula-relay/legacy

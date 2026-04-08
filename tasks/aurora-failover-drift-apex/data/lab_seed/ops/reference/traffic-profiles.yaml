@@ -1,0 +1,19 @@
+traffic_profiles:
+  profiles:
+    shared-edge-drift:
+      gateway_host: edge.migration.internal.devops
+      gateway_class: shared-edge
+      route_prefix: /aurora
+      propagation_header: x-release-track
+      progressive_steps:
+        - 25
+        - 100
+    mesh-dr-eu:
+      gateway_host: edge.dr.internal.devops
+      gateway_class: failover-mesh
+      route_prefix: /aurora-gateway
+      propagation_header: x-aurora-lane
+      progressive_steps:
+        - 10
+        - 50
+        - 100

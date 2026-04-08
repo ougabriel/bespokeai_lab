@@ -1,0 +1,16 @@
+release_profiles:
+  profiles:
+    shadow-fallback:
+      required_runner_profile: shared-runner
+      target_branch: release-relay
+      tag_source: build_number
+      registry_host: registry.shadow.devops
+      write_back_target: app-repo
+      write_back_branch: release-relay
+    relay-mainline:
+      required_runner_profile: socket-dr
+      target_branch: main
+      tag_source: git_sha
+      registry_host: registry.internal.devops
+      write_back_target: gitops-repo
+      write_back_branch: main

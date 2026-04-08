@@ -1,0 +1,6 @@
+application:
+  service: nebula-api
+  namespace: prod
+  project: shared-services
+  source_path: services/nebula-api/legacy
+  sync_policy: manual

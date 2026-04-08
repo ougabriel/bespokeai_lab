@@ -1,0 +1,3 @@
+hosts:
+  registry.internal.devops: 10.42.0.15
+  argocd.internal.devops: 10.42.0.23

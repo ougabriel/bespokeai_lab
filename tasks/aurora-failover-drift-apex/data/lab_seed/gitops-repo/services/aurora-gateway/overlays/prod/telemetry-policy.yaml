@@ -1,0 +1,11 @@
+telemetry:
+  service: aurora-gateway-legacy
+  namespace: observability-shared
+  provider: migration-otel
+  metric_source: migration-prometheus
+  gateway_class: shared-edge
+  route_prefix: /aurora
+  lane: release-failover
+  trace_sampling_percent: 1
+  propagation_header: x-release-track
+  propagation_value: migration

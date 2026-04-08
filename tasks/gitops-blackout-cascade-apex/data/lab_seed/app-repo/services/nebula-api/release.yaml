@@ -1,0 +1,4 @@
+service: nebula-api
+branch: release-prod
+artifact_repository: registry.service.devops/platform/nebula-api
+current_commit: 2026.03.31-stable

@@ -1,0 +1,6 @@
+name: failover-bot
+username: aurora-pusher
+token: stale-aurora-token
+scopes:
+  - push
+  - pull
