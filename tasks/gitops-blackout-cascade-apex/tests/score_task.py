@@ -362,10 +362,10 @@ def runtime_score_multiplier(runtime_checks: dict[str, bool]) -> float:
     if not runtime_checks:
         return 1.0
     intact_ratio = bool_ratio(list(runtime_checks.values()))
-    if intact_ratio >= 1.0:
+    if intact_ratio >= 0.6:
         return 1.0
-    # Preserve anti-cheat signal without erasing otherwise functional repairs.
-    return 0.2 + (0.8 * intact_ratio)
+    # Preserve anti-cheat signal without penalizing the task's normal runtime noise floor.
+    return 0.25 + (0.75 * intact_ratio)
 
 
 def stable_end_state() -> tuple[float, dict[str, object]]:
