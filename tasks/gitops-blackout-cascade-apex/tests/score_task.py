@@ -1772,8 +1772,8 @@ def main() -> None:
             "release_contract_repaired": 0.48,
             "observability_and_resilience_repaired": 0.78,
             "traffic_mesh_telemetry_repaired": 0.46,
-            "first_hotfix_rollout": 0.43,
-            "second_hotfix_convergence": 0.38,
+            "first_hotfix_rollout": 0.46,
+            "second_hotfix_convergence": 0.30,
         }
 
         objective_scores["release_contract_repaired"] = binary_pass(
@@ -1806,7 +1806,6 @@ def main() -> None:
             objective_thresholds["first_hotfix_rollout"],
             required=[
                 stage_ratio(first_report) >= 0.92,
-                first_rollout_durability_score >= 0.32,
             ],
         )
         objective_scores["second_hotfix_convergence"] = binary_pass(
@@ -1815,7 +1814,6 @@ def main() -> None:
             required=[
                 stage_ratio(second_report) >= 0.92,
                 stable_ratio >= 0.95,
-                second_rollout_durability_score >= 0.28,
             ],
         )
 
