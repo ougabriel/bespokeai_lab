@@ -387,6 +387,11 @@ def blended_functional_progress(
     return clamp01((functional_weight * functional) + ((1 - functional_weight) * functional * support))
 
 
+def binary_pass(score: float, threshold: float, required: list[bool] | None = None) -> float:
+    requirements_ok = all(required) if required is not None else True
+    return 1.0 if requirements_ok and clamp01(score) >= threshold else 0.0
+
+
 def stable_end_state() -> tuple[float, dict[str, object]]:
     checks: dict[str, object] = {}
     score_components: list[float] = []
@@ -1714,17 +1719,17 @@ def main() -> None:
             release_core_score,
             release_handoff_score,
             release_attestation_score,
-        )
+        ) * runtime_penalty
         observability_support_score = durable_progress(
             observability_core_score,
             observability_handoff_score,
             analysis_handoff_score,
-        )
+        ) * runtime_penalty
         traffic_support_score = durable_progress(
             traffic_core_score,
             traffic_handoff_score,
             route_workload_score,
-        )
+        ) * runtime_penalty
         first_rollout_functional_score = (
             (1.0 if first_rollout_ok else stage_ratio(first_report))
             + stage_group_ratio(first_report, DELIVERY_STAGES)
@@ -1734,7 +1739,7 @@ def main() -> None:
             release_handoff_score,
             release_attestation_score,
             first_rollout_support_score,
-        )
+        ) * runtime_penalty
         second_rollout_functional_score = (
             0.4 * (1.0 if second_rollout_ok else stage_ratio(second_report))
             + 0.2 * raw_checks["health_api_ready"]
@@ -1745,32 +1750,95 @@ def main() -> None:
             traffic_support_score,
             stable_live_state_score,
             second_rollout_support_score,
-        )
+        ) * runtime_penalty
 
-        objective_scores["release_contract_repaired"] = release_support_score
-        objective_scores["observability_and_resilience_repaired"] = observability_support_score
-        objective_scores["traffic_mesh_telemetry_repaired"] = traffic_support_score
-        objective_scores["first_hotfix_rollout"] = blended_functional_progress(
+        continuous_objective_scores = {
+            "release_contract_repaired": release_support_score,
+            "observability_and_resilience_repaired": observability_support_score,
+            "traffic_mesh_telemetry_repaired": traffic_support_score,
+            "first_hotfix_rollout": blended_functional_progress(
+                first_rollout_functional_score,
+                first_rollout_durability_score,
+                functional_weight=0.3,
+            ),
+            "second_hotfix_convergence": blended_functional_progress(
+                second_rollout_functional_score,
+                second_rollout_durability_score,
+                functional_weight=0.15,
+            ),
+        }
+
+        objective_thresholds = {
+            "release_contract_repaired": 0.72,
+            "observability_and_resilience_repaired": 0.78,
+            "traffic_mesh_telemetry_repaired": 0.74,
+            "first_hotfix_rollout": 0.62,
+            "second_hotfix_convergence": 0.67,
+        }
+
+        objective_scores["release_contract_repaired"] = binary_pass(
+            continuous_objective_scores["release_contract_repaired"],
+            objective_thresholds["release_contract_repaired"],
+            required=[
+                raw_checks["bootstrap_idempotent"] == 1.0,
+                release_handoff_score >= 0.6,
+            ],
+        )
+        objective_scores["observability_and_resilience_repaired"] = binary_pass(
+            continuous_objective_scores["observability_and_resilience_repaired"],
+            objective_thresholds["observability_and_resilience_repaired"],
+            required=[
+                raw_checks["health_api_ready"] == 1.0,
+                observability_handoff_score >= 0.55,
+                analysis_handoff_score >= 0.55,
+            ],
+        )
+        objective_scores["traffic_mesh_telemetry_repaired"] = binary_pass(
+            continuous_objective_scores["traffic_mesh_telemetry_repaired"],
+            objective_thresholds["traffic_mesh_telemetry_repaired"],
+            required=[
+                traffic_handoff_score >= 0.5,
+                route_workload_score >= 0.5,
+                stable_live_state_score >= 0.75,
+            ],
+        )
+        objective_scores["first_hotfix_rollout"] = binary_pass(
             first_rollout_functional_score,
-            first_rollout_durability_score,
-            functional_weight=0.3,
+            objective_thresholds["first_hotfix_rollout"],
+            required=[
+                first_rollout_ok,
+                first_rollout_durability_score >= 0.6,
+                release_handoff_score >= 0.55,
+            ],
         )
-        objective_scores["second_hotfix_convergence"] = blended_functional_progress(
+        objective_scores["second_hotfix_convergence"] = binary_pass(
             second_rollout_functional_score,
-            second_rollout_durability_score,
-            functional_weight=0.15,
+            objective_thresholds["second_hotfix_convergence"],
+            required=[
+                second_rollout_ok,
+                stable_ratio >= 0.9,
+                second_rollout_durability_score >= 0.62,
+            ],
         )
 
-        details["raw_objective_scores"] = dict(objective_scores)
-        objective_scores = {
-            name: completion_curve(score) * runtime_penalty
-            for name, score in objective_scores.items()
+        details["raw_objective_scores"] = dict(continuous_objective_scores)
+        details["binary_objective_thresholds"] = dict(objective_thresholds)
+        details["objective_gate_inputs"] = {
+            "runtime_penalty": runtime_penalty,
+            "release_handoff_score": release_handoff_score,
+            "observability_handoff_score": observability_handoff_score,
+            "analysis_handoff_score": analysis_handoff_score,
+            "traffic_handoff_score": traffic_handoff_score,
+            "route_workload_score": route_workload_score,
+            "stable_live_state_score": stable_live_state_score,
+            "first_rollout_durability_score": first_rollout_durability_score,
+            "second_rollout_durability_score": second_rollout_durability_score,
         }
         details["scoring_curve"] = {
-            "type": "linear_visibility_curve",
+            "type": "binary_objective_thresholds",
             "description": (
-                "Objective scores stay linear so partially repaired but functional states "
-                "remain visible in the final reward."
+                "Detailed progress remains in raw_objective_scores, while the five scored "
+                "subscores are binary gates for review-facing evaluation."
             ),
         }
 
