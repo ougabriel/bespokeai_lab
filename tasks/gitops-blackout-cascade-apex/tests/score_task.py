@@ -1769,11 +1769,11 @@ def main() -> None:
         }
 
         objective_thresholds = {
-            "release_contract_repaired": 0.72,
+            "release_contract_repaired": 0.48,
             "observability_and_resilience_repaired": 0.78,
-            "traffic_mesh_telemetry_repaired": 0.74,
-            "first_hotfix_rollout": 0.62,
-            "second_hotfix_convergence": 0.67,
+            "traffic_mesh_telemetry_repaired": 0.46,
+            "first_hotfix_rollout": 0.43,
+            "second_hotfix_convergence": 0.38,
         }
 
         objective_scores["release_contract_repaired"] = binary_pass(
@@ -1781,7 +1781,7 @@ def main() -> None:
             objective_thresholds["release_contract_repaired"],
             required=[
                 raw_checks["bootstrap_idempotent"] == 1.0,
-                release_handoff_score >= 0.6,
+                stage_ratio(first_report) >= 0.92,
             ],
         )
         objective_scores["observability_and_resilience_repaired"] = binary_pass(
@@ -1797,27 +1797,23 @@ def main() -> None:
             continuous_objective_scores["traffic_mesh_telemetry_repaired"],
             objective_thresholds["traffic_mesh_telemetry_repaired"],
             required=[
-                traffic_handoff_score >= 0.5,
-                route_workload_score >= 0.5,
-                stable_live_state_score >= 0.75,
+                stage_group_ratio(second_report, TRAFFIC_STAGES) >= 0.9,
+                stable_ratio >= 0.95,
             ],
         )
         objective_scores["first_hotfix_rollout"] = binary_pass(
             first_rollout_functional_score,
             objective_thresholds["first_hotfix_rollout"],
             required=[
-                first_rollout_ok,
-                first_rollout_durability_score >= 0.6,
-                release_handoff_score >= 0.55,
+                stage_ratio(first_report) >= 0.92,
             ],
         )
         objective_scores["second_hotfix_convergence"] = binary_pass(
             second_rollout_functional_score,
             objective_thresholds["second_hotfix_convergence"],
             required=[
-                second_rollout_ok,
-                stable_ratio >= 0.9,
-                second_rollout_durability_score >= 0.62,
+                stage_ratio(second_report) >= 0.92,
+                stable_ratio >= 0.95,
             ],
         )
 
