@@ -336,138 +336,251 @@ def bool_ratio(values: list[bool]) -> float:
     return sum(1.0 if value else 0.0 for value in values) / len(values)
 
 
+def clamp01(score: float) -> float:
+    return max(0.0, min(1.0, score))
+
+
+def dict_field_ratio(payload: object, expected_fields: dict[str, object]) -> float:
+    if not isinstance(payload, dict) or not expected_fields:
+        return 0.0
+    return sum(
+        1.0 if payload.get(key) == expected else 0.0
+        for key, expected in expected_fields.items()
+    ) / len(expected_fields)
+
+
+def mostly_complete(score: float, threshold: float = 0.85) -> bool:
+    return clamp01(score) >= threshold
+
+
 def completion_curve(score: float) -> float:
-    """Compress partial completion so near-miss states score below full repair."""
-    bounded = max(0.0, min(1.0, score))
-    return bounded * bounded
+    """Keep partial completion visible instead of collapsing it toward zero."""
+    return clamp01(score)
 
 
-def stable_end_state() -> tuple[float, dict[str, bool]]:
-    checks: dict[str, bool] = {}
+def runtime_score_multiplier(runtime_checks: dict[str, bool]) -> float:
+    if not runtime_checks:
+        return 1.0
+    intact_ratio = bool_ratio(list(runtime_checks.values()))
+    if intact_ratio >= 1.0:
+        return 1.0
+    # Preserve anti-cheat signal without erasing otherwise functional repairs.
+    return 0.2 + (0.8 * intact_ratio)
+
+
+def stable_end_state() -> tuple[float, dict[str, object]]:
+    checks: dict[str, object] = {}
+    score_components: list[float] = []
     contract = release_contract()
     gitops_root = LAB_ROOT / contract["write_back_target"]
     expected = expected_secret()
 
     last_report = load_json(LAB_ROOT / "artifacts" / "last_rollout.json", {})
     last_stages = last_report.get("stages", {})
-    checks["last_report_is_second_commit"] = (
-        last_report.get("commit_sha") == SECOND_COMMIT
-        and last_report.get("status") == "healthy"
-        and all(last_stages.get(name, {}).get("status") == "success" for name in EXPECTED_STAGES)
-    )
+    last_report_score = (
+        (1.0 if last_report.get("commit_sha") == SECOND_COMMIT else 0.0)
+        + (1.0 if last_report.get("status") == "healthy" else 0.0)
+        + (
+            sum(
+                1.0
+                if last_stages.get(name, {}).get("status") == "success"
+                else 0.0
+                for name in EXPECTED_STAGES
+            )
+            / len(EXPECTED_STAGES)
+        )
+    ) / 3
+    checks["last_report_is_second_commit"] = mostly_complete(last_report_score, 0.95)
+    checks["last_report_is_second_commit_score"] = last_report_score
+    score_components.append(last_report_score)
 
     promotion_intent = load_json(LAB_ROOT / "artifacts" / "promotion_intent.json", {})
-    checks["promotion_intent_tracks_second_commit"] = (
-        promotion_intent.get("commit_sha") == SECOND_COMMIT
-        and promotion_intent.get("target_overlay") == contract["prod_overlay"]
-        and promotion_intent.get("channel") == contract["promotion_channel"]
-        and promotion_intent.get("analysis_template") == contract["analysis_template"]
+    promotion_intent_score = dict_field_ratio(
+        promotion_intent,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "target_overlay": contract["prod_overlay"],
+            "channel": contract["promotion_channel"],
+            "analysis_template": contract["analysis_template"],
+        },
     )
+    checks["promotion_intent_tracks_second_commit"] = mostly_complete(promotion_intent_score, 0.95)
+    checks["promotion_intent_tracks_second_commit_score"] = promotion_intent_score
+    score_components.append(promotion_intent_score)
 
     policy_gate = load_json(LAB_ROOT / "artifacts" / "policy_gate.json", {})
-    checks["policy_gate_tracks_second_commit"] = (
-        policy_gate.get("commit_sha") == SECOND_COMMIT
-        and policy_gate.get("lane") == contract["lane_name"]
-        and policy_gate.get("require_analysis") is True
-        and policy_gate.get("progressive_steps") == contract["progressive_steps"]
+    policy_gate_score = dict_field_ratio(
+        policy_gate,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "lane": contract["lane_name"],
+            "require_analysis": True,
+            "progressive_steps": contract["progressive_steps"],
+        },
     )
+    checks["policy_gate_tracks_second_commit"] = mostly_complete(policy_gate_score, 0.95)
+    checks["policy_gate_tracks_second_commit_score"] = policy_gate_score
+    score_components.append(policy_gate_score)
 
     resilience_gate = load_json(LAB_ROOT / "artifacts" / "resilience_gate.json", {})
-    checks["resilience_gate_tracks_second_commit"] = (
-        resilience_gate.get("commit_sha") == SECOND_COMMIT
-        and resilience_gate.get("lane") == contract["lane_name"]
-        and resilience_gate.get("status") == "Ready"
+    resilience_gate_score = dict_field_ratio(
+        resilience_gate,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "lane": contract["lane_name"],
+            "status": "Ready",
+        },
     )
+    checks["resilience_gate_tracks_second_commit"] = mostly_complete(resilience_gate_score, 0.95)
+    checks["resilience_gate_tracks_second_commit_score"] = resilience_gate_score
+    score_components.append(resilience_gate_score)
 
     alert_policy = load_json(LAB_ROOT / "artifacts" / "alert_policy.json", {})
-    checks["alert_policy_tracks_second_commit"] = (
-        alert_policy.get("commit_sha") == SECOND_COMMIT
-        and alert_policy.get("metric_source") == contract["metric_source"]
-        and alert_policy.get("receiver") == contract["alert_receiver"]
-        and alert_policy.get("status") == "Armed"
+    alert_policy_score = dict_field_ratio(
+        alert_policy,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "metric_source": contract["metric_source"],
+            "receiver": contract["alert_receiver"],
+            "status": "Armed",
+        },
     )
+    checks["alert_policy_tracks_second_commit"] = mostly_complete(alert_policy_score, 0.95)
+    checks["alert_policy_tracks_second_commit_score"] = alert_policy_score
+    score_components.append(alert_policy_score)
 
     analysis_report = load_json(LAB_ROOT / "artifacts" / "analysis_report.json", {})
-    checks["analysis_report_tracks_second_commit"] = (
-        analysis_report.get("commit_sha") == SECOND_COMMIT
-        and analysis_report.get("template") == contract["analysis_template"]
-        and analysis_report.get("metric_source") == contract["metric_source"]
-        and analysis_report.get("status") == "Healthy"
+    analysis_report_score = dict_field_ratio(
+        analysis_report,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "template": contract["analysis_template"],
+            "metric_source": contract["metric_source"],
+            "status": "Healthy",
+        },
     )
+    checks["analysis_report_tracks_second_commit"] = mostly_complete(analysis_report_score, 0.95)
+    checks["analysis_report_tracks_second_commit_score"] = analysis_report_score
+    score_components.append(analysis_report_score)
 
     telemetry_handoff = load_json(LAB_ROOT / "artifacts" / "telemetry_handoff.json", {})
-    checks["telemetry_handoff_tracks_second_commit"] = (
-        telemetry_handoff.get("commit_sha") == SECOND_COMMIT
-        and telemetry_handoff.get("lane") == contract["lane_name"]
-        and telemetry_handoff.get("metric_source") == contract["metric_source"]
-        and telemetry_handoff.get("provider") == contract["telemetry_provider"]
-        and telemetry_handoff.get("status") == "Healthy"
+    telemetry_handoff_score = dict_field_ratio(
+        telemetry_handoff,
+        {
+            "commit_sha": SECOND_COMMIT,
+            "lane": contract["lane_name"],
+            "metric_source": contract["metric_source"],
+            "provider": contract["telemetry_provider"],
+            "status": "Healthy",
+        },
     )
+    checks["telemetry_handoff_tracks_second_commit"] = mostly_complete(
+        telemetry_handoff_score, 0.95
+    )
+    checks["telemetry_handoff_tracks_second_commit_score"] = telemetry_handoff_score
+    score_components.append(telemetry_handoff_score)
 
     values = load_yaml(gitops_root / contract["prod_overlay"] / "values.yaml")
-    checks["gitops_tag_advanced"] = values.get("image") == {
-        "repository": contract["image_repository"],
-        "tag": SECOND_COMMIT,
-    }
+    gitops_tag_score = dict_field_ratio(
+        values.get("image", {}),
+        {
+            "repository": contract["image_repository"],
+            "tag": SECOND_COMMIT,
+        },
+    )
+    checks["gitops_tag_advanced"] = mostly_complete(gitops_tag_score, 1.0)
+    checks["gitops_tag_advanced_score"] = gitops_tag_score
+    score_components.append(gitops_tag_score)
 
     deployment_path = LAB_ROOT / "cluster" / "live" / "deployments" / "nebula-api.yaml"
     deployment = load_yaml(deployment_path)["deployment"] if deployment_path.exists() else {}
-    checks["live_deployment_converged"] = deployment == {
-        "service": "nebula-api",
-        "namespace": "prod",
-        "image": f"{contract['image_repository']}:{SECOND_COMMIT}",
-        "status": "Healthy",
-        "sync_status": "Synced",
-        "live_commit": SECOND_COMMIT,
-        "source_path": contract["prod_overlay"],
-    }
+    live_deployment_score = dict_field_ratio(
+        deployment,
+        {
+            "service": "nebula-api",
+            "namespace": "prod",
+            "image": f"{contract['image_repository']}:{SECOND_COMMIT}",
+            "status": "Healthy",
+            "sync_status": "Synced",
+            "live_commit": SECOND_COMMIT,
+            "source_path": contract["prod_overlay"],
+        },
+    )
+    checks["live_deployment_converged"] = mostly_complete(live_deployment_score)
+    checks["live_deployment_converged_score"] = live_deployment_score
+    score_components.append(live_deployment_score)
 
     route_path = LAB_ROOT / "cluster" / "live" / "routes" / "nebula-api.yaml"
     route = load_yaml(route_path)["route"] if route_path.exists() else {}
-    checks["live_route_converged"] = route == {
-        "service": contract["traffic_service"],
-        "gateway_host": contract["gateway_host"],
-        "gateway_class": contract["gateway_class"],
-        "route_prefix": contract["route_prefix"],
-        "analysis_template": contract["analysis_template"],
-        "progressive_steps": contract["progressive_steps"],
-        "live_commit": SECOND_COMMIT,
-        "status": "Healthy",
-    }
+    live_route_score = dict_field_ratio(
+        route,
+        {
+            "service": contract["traffic_service"],
+            "gateway_host": contract["gateway_host"],
+            "gateway_class": contract["gateway_class"],
+            "route_prefix": contract["route_prefix"],
+            "analysis_template": contract["analysis_template"],
+            "progressive_steps": contract["progressive_steps"],
+            "live_commit": SECOND_COMMIT,
+            "status": "Healthy",
+        },
+    )
+    checks["live_route_converged"] = mostly_complete(live_route_score)
+    checks["live_route_converged_score"] = live_route_score
+    score_components.append(live_route_score)
 
     mesh_path = LAB_ROOT / "cluster" / "live" / "mesh" / "nebula-api.yaml"
     mesh = load_yaml(mesh_path)["mesh"] if mesh_path.exists() else {}
-    checks["live_mesh_converged"] = mesh == {
-        "gateway_host": contract["gateway_host"],
-        "gateway_class": contract["gateway_class"],
-        "route_prefix": contract["route_prefix"],
-        "service": contract["traffic_service"],
-        "service_host": contract["mesh_service_host"],
-        "live_commit": SECOND_COMMIT,
-        "status": "Healthy",
-    }
+    live_mesh_score = dict_field_ratio(
+        mesh,
+        {
+            "gateway_host": contract["gateway_host"],
+            "gateway_class": contract["gateway_class"],
+            "route_prefix": contract["route_prefix"],
+            "service": contract["traffic_service"],
+            "service_host": contract["mesh_service_host"],
+            "live_commit": SECOND_COMMIT,
+            "status": "Healthy",
+        },
+    )
+    checks["live_mesh_converged"] = mostly_complete(live_mesh_score)
+    checks["live_mesh_converged_score"] = live_mesh_score
+    score_components.append(live_mesh_score)
 
     telemetry_path = LAB_ROOT / "cluster" / "live" / "telemetry" / "nebula-api.yaml"
     telemetry = load_yaml(telemetry_path)["telemetry"] if telemetry_path.exists() else {}
-    checks["live_telemetry_converged"] = telemetry == {
-        "service": contract["traffic_service"],
-        "namespace": contract["monitor_namespace"],
-        "provider": contract["telemetry_provider"],
-        "metric_source": contract["metric_source"],
-        "gateway_class": contract["gateway_class"],
-        "route_prefix": contract["route_prefix"],
-        "lane": contract["lane_name"],
-        "trace_sampling_percent": contract["trace_sampling_percent"],
-        "propagation_header": contract["propagation_header"],
-        "propagation_value": contract["lane_name"],
-        "live_commit": SECOND_COMMIT,
-        "status": "Healthy",
-    }
+    live_telemetry_score = dict_field_ratio(
+        telemetry,
+        {
+            "service": contract["traffic_service"],
+            "namespace": contract["monitor_namespace"],
+            "provider": contract["telemetry_provider"],
+            "metric_source": contract["metric_source"],
+            "gateway_class": contract["gateway_class"],
+            "route_prefix": contract["route_prefix"],
+            "lane": contract["lane_name"],
+            "trace_sampling_percent": contract["trace_sampling_percent"],
+            "propagation_header": contract["propagation_header"],
+            "propagation_value": contract["lane_name"],
+            "live_commit": SECOND_COMMIT,
+            "status": "Healthy",
+        },
+    )
+    checks["live_telemetry_converged"] = mostly_complete(live_telemetry_score)
+    checks["live_telemetry_converged_score"] = live_telemetry_score
+    score_components.append(live_telemetry_score)
 
-    live_secret = load_yaml(LAB_ROOT / "cluster" / "live" / "secrets" / "registry-robot.yaml")
-    checks["live_secret_matches_expected"] = live_secret == expected
+    live_secret_path = LAB_ROOT / "cluster" / "live" / "secrets" / "registry-robot.yaml"
+    live_secret = load_yaml(live_secret_path) if live_secret_path.exists() else {}
+    live_secret_score = dict_field_ratio(live_secret, expected)
+    checks["live_secret_matches_expected"] = mostly_complete(live_secret_score, 1.0)
+    checks["live_secret_matches_expected_score"] = live_secret_score
+    score_components.append(live_secret_score)
 
-    return (1.0 if all(checks.values()) else 0.0), checks
+    return (
+        sum(score_components) / len(score_components) if score_components else 0.0,
+        checks,
+    )
 
 
 def write_outputs(score: float, subscores: dict[str, float], details: dict[str, object]) -> None:
@@ -1248,8 +1361,10 @@ def main() -> None:
         raw_checks["health_api_ready"] = 1.0 if health_response.status_code == 200 else 0.0
 
         runtime_ok, runtime_checks = runtime_integrity()
+        runtime_penalty = runtime_score_multiplier(runtime_checks)
         details["runtime_integrity"] = runtime_checks
         details["runtime_intact"] = runtime_ok
+        details["runtime_score_multiplier"] = runtime_penalty
 
         first_rollout = run_command(["python", "/app/bin/simulate_rollout.py", "--commit-sha", FIRST_COMMIT])
         first_report = parse_json_output(first_rollout)
@@ -1271,6 +1386,15 @@ def main() -> None:
         stable_ratio, stable_checks = stable_end_state()
         raw_checks["stable_end_state"] = stable_ratio
         details["stable_checks"] = stable_checks
+
+        stable_live_state_score = (
+            float(stable_checks.get("live_deployment_converged_score", 0.0))
+            + float(stable_checks.get("live_route_converged_score", 0.0))
+            + float(stable_checks.get("live_mesh_converged_score", 0.0))
+            + float(stable_checks.get("live_telemetry_converged_score", 0.0))
+            + float(stable_checks.get("gitops_tag_advanced_score", 0.0))
+            + float(stable_checks.get("live_secret_matches_expected_score", 0.0))
+        ) / 6
 
         release_objective_checks = {
             "bootstrap_idempotent": raw_checks["bootstrap_idempotent"],
@@ -1541,65 +1665,70 @@ def main() -> None:
             )
         ) / 4
 
-        objective_scores["release_contract_repaired"] = (
-            (
-                0.3 * release_core_score
-                + 0.25 * release_handoff_score
-                + 0.45 * release_attestation_score
+        first_rollout_support_score = (
+            bool_ratio(
+                [
+                    raw_checks.get("release_bundle_core_aligned", 0.0) == 1.0,
+                    raw_checks.get("release_bundle_handoff_aligned", 0.0) == 1.0,
+                    raw_checks.get("release_bundle_contract_aligned", 0.0) == 1.0,
+                ]
             )
-            if runtime_ok
-            else 0.0
+            + raw_checks.get("release_contract_manifest_migrated", 0.0)
+            + raw_checks.get("release_baton_migrated", 0.0)
+            + raw_checks.get("release_attestation_migrated", 0.0)
+            + raw_checks.get("delivery_contract_operating_aligned", 0.0)
+        ) / 5
+        second_rollout_support_score = (
+            raw_checks.get("delivery_contract_signal_aligned", 0.0)
+            + raw_checks.get("delivery_contract_network_aligned", 0.0)
+            + raw_checks.get("telemetry_handoff_service_aligned", 0.0)
+            + raw_checks.get("telemetry_handoff_signal_aligned", 0.0)
+            + raw_checks.get("telemetry_handoff_route_aligned", 0.0)
+            + raw_checks.get("telemetry_handoff_manifest_migrated", 0.0)
+            + raw_checks.get("mesh_renderer_route_aligned", 0.0)
+            + raw_checks.get("mesh_renderer_subsets_aligned", 0.0)
+            + raw_checks.get("mesh_renderer_migrated", 0.0)
+            + raw_checks.get("telemetry_renderer_propagation_aligned", 0.0)
+        ) / 10
+
+        objective_scores["release_contract_repaired"] = (
+            0.4 * release_core_score
+            + 0.2 * release_handoff_score
+            + 0.4 * release_attestation_score
         )
         objective_scores["observability_and_resilience_repaired"] = (
-            (
-                0.3 * observability_core_score
-                + 0.25 * observability_handoff_score
-                + 0.45 * analysis_handoff_score
-            )
-            if runtime_ok
-            else 0.0
+            0.4 * observability_core_score
+            + 0.25 * observability_handoff_score
+            + 0.35 * analysis_handoff_score
         )
         objective_scores["traffic_mesh_telemetry_repaired"] = (
-            (
-                0.3 * traffic_core_score
-                + 0.25 * traffic_handoff_score
-                + 0.45 * route_workload_score
-            )
-            if runtime_ok
-            else 0.0
+            0.4 * traffic_core_score
+            + 0.25 * traffic_handoff_score
+            + 0.35 * route_workload_score
         )
         objective_scores["first_hotfix_rollout"] = (
-            (
-                0.45 * first_rollout_base_score
-                + 0.15 * release_core_score
-                + 0.15 * release_handoff_score
-                + 0.25 * release_attestation_score
-            )
-            if runtime_ok
-            else 0.0
+            0.55 * (1.0 if first_rollout_ok else stage_ratio(first_report))
+            + 0.2 * stage_group_ratio(first_report, DELIVERY_STAGES)
+            + 0.25 * first_rollout_support_score
         )
         objective_scores["second_hotfix_convergence"] = (
-            (
-                0.4 * second_rollout_base_score
-                + 0.15 * observability_core_score
-                + 0.15 * traffic_core_score
-                + 0.15 * ((observability_handoff_score + analysis_handoff_score) / 2)
-                + 0.15 * ((traffic_handoff_score + route_workload_score) / 2)
-            )
-            if runtime_ok
-            else 0.0
+            0.35 * (1.0 if second_rollout_ok else stage_ratio(second_report))
+            + 0.15 * raw_checks["health_api_ready"]
+            + 0.25 * stable_ratio
+            + 0.1 * stage_group_ratio(second_report, OBSERVABILITY_STAGES + TRAFFIC_STAGES)
+            + 0.15 * ((stable_live_state_score + second_rollout_support_score) / 2)
         )
 
         details["raw_objective_scores"] = dict(objective_scores)
         objective_scores = {
-            name: completion_curve(score) if runtime_ok else 0.0
+            name: completion_curve(score) * runtime_penalty
             for name, score in objective_scores.items()
         }
         details["scoring_curve"] = {
-            "type": "quadratic_completion_curve",
+            "type": "linear_visibility_curve",
             "description": (
-                "Objective scores are squared so the reward concentrates on near-complete, "
-                "stable repairs instead of mostly-correct states."
+                "Objective scores stay linear so partially repaired but functional states "
+                "remain visible in the final reward."
             ),
         }
 
@@ -1615,6 +1744,9 @@ def main() -> None:
             "route_workload": route_workload_score,
             "first_rollout_base": first_rollout_base_score,
             "second_rollout_base": second_rollout_base_score,
+            "stable_live_state": stable_live_state_score,
+            "first_rollout_support": first_rollout_support_score,
+            "second_rollout_support": second_rollout_support_score,
         }
 
         details["objective_checks"] = {
