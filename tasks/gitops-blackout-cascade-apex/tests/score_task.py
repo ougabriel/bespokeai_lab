@@ -368,6 +368,25 @@ def runtime_score_multiplier(runtime_checks: dict[str, bool]) -> float:
     return 0.25 + (0.75 * intact_ratio)
 
 
+def durable_progress(*parts: float) -> float:
+    if not parts:
+        return 0.0
+    values = [clamp01(float(part)) for part in parts]
+    average = sum(values) / len(values)
+    weakest = min(values)
+    return clamp01((0.25 * average) + (0.75 * average * weakest))
+
+
+def blended_functional_progress(
+    functional_score: float,
+    support_score: float,
+    functional_weight: float,
+) -> float:
+    functional = clamp01(functional_score)
+    support = clamp01(support_score)
+    return clamp01((functional_weight * functional) + ((1 - functional_weight) * functional * support))
+
+
 def stable_end_state() -> tuple[float, dict[str, object]]:
     checks: dict[str, object] = {}
     score_components: list[float] = []
@@ -1691,32 +1710,55 @@ def main() -> None:
             + raw_checks.get("telemetry_renderer_propagation_aligned", 0.0)
         ) / 10
 
-        objective_scores["release_contract_repaired"] = (
-            0.4 * release_core_score
-            + 0.2 * release_handoff_score
-            + 0.4 * release_attestation_score
+        release_support_score = durable_progress(
+            release_core_score,
+            release_handoff_score,
+            release_attestation_score,
         )
-        objective_scores["observability_and_resilience_repaired"] = (
-            0.4 * observability_core_score
-            + 0.25 * observability_handoff_score
-            + 0.35 * analysis_handoff_score
+        observability_support_score = durable_progress(
+            observability_core_score,
+            observability_handoff_score,
+            analysis_handoff_score,
         )
-        objective_scores["traffic_mesh_telemetry_repaired"] = (
-            0.4 * traffic_core_score
-            + 0.25 * traffic_handoff_score
-            + 0.35 * route_workload_score
+        traffic_support_score = durable_progress(
+            traffic_core_score,
+            traffic_handoff_score,
+            route_workload_score,
         )
-        objective_scores["first_hotfix_rollout"] = (
-            0.55 * (1.0 if first_rollout_ok else stage_ratio(first_report))
-            + 0.2 * stage_group_ratio(first_report, DELIVERY_STAGES)
-            + 0.25 * first_rollout_support_score
+        first_rollout_functional_score = (
+            (1.0 if first_rollout_ok else stage_ratio(first_report))
+            + stage_group_ratio(first_report, DELIVERY_STAGES)
+        ) / 2
+        first_rollout_durability_score = durable_progress(
+            release_core_score,
+            release_handoff_score,
+            release_attestation_score,
+            first_rollout_support_score,
         )
-        objective_scores["second_hotfix_convergence"] = (
-            0.35 * (1.0 if second_rollout_ok else stage_ratio(second_report))
-            + 0.15 * raw_checks["health_api_ready"]
-            + 0.25 * stable_ratio
-            + 0.1 * stage_group_ratio(second_report, OBSERVABILITY_STAGES + TRAFFIC_STAGES)
-            + 0.15 * ((stable_live_state_score + second_rollout_support_score) / 2)
+        second_rollout_functional_score = (
+            0.4 * (1.0 if second_rollout_ok else stage_ratio(second_report))
+            + 0.2 * raw_checks["health_api_ready"]
+            + 0.4 * stable_ratio
+        )
+        second_rollout_durability_score = durable_progress(
+            observability_support_score,
+            traffic_support_score,
+            stable_live_state_score,
+            second_rollout_support_score,
+        )
+
+        objective_scores["release_contract_repaired"] = release_support_score
+        objective_scores["observability_and_resilience_repaired"] = observability_support_score
+        objective_scores["traffic_mesh_telemetry_repaired"] = traffic_support_score
+        objective_scores["first_hotfix_rollout"] = blended_functional_progress(
+            first_rollout_functional_score,
+            first_rollout_durability_score,
+            functional_weight=0.3,
+        )
+        objective_scores["second_hotfix_convergence"] = blended_functional_progress(
+            second_rollout_functional_score,
+            second_rollout_durability_score,
+            functional_weight=0.15,
         )
 
         details["raw_objective_scores"] = dict(objective_scores)
@@ -1744,6 +1786,13 @@ def main() -> None:
             "route_workload": route_workload_score,
             "first_rollout_base": first_rollout_base_score,
             "second_rollout_base": second_rollout_base_score,
+            "release_support": release_support_score,
+            "observability_support": observability_support_score,
+            "traffic_support": traffic_support_score,
+            "first_rollout_functional": first_rollout_functional_score,
+            "first_rollout_durability": first_rollout_durability_score,
+            "second_rollout_functional": second_rollout_functional_score,
+            "second_rollout_durability": second_rollout_durability_score,
             "stable_live_state": stable_live_state_score,
             "first_rollout_support": first_rollout_support_score,
             "second_rollout_support": second_rollout_support_score,
