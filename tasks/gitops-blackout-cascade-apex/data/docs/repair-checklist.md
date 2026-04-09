@@ -36,10 +36,14 @@ From that chain, derive the active production contract:
   - `app-repo/services/nebula-api/release-contract.yaml`
   - `app-repo/services/nebula-api/release-baton.yaml`
   - `app-repo/services/nebula-api/release-attestation.yaml`
+  - `app-repo/services/nebula-api/release-witness.yaml`
   - `app-repo/ci/scripts/render_release_bundle.py`
   - `app-repo/ci/scripts/render_release_attestation.py`
+  - `app-repo/ci/scripts/render_release_witness.py`
 - These files should agree on the same runner profile, branch, tag source, image repository, tracked service, target overlay, and contract label.
 - The baton and attestation manifests are durable source-of-truth, not rollout by-products. If they still point at the migration lane, later stages will drift even when CI looks healthy.
+- The release witness records which live route and gateway the prod handoff is supposed to reach. It must agree with the release contract and with the route-facing prod resources.
+- The first CI stage now validates the release contract, release baton, release attestation, release witness, and both release renderers before the lane can progress.
 
 2. Registry and updater
 
@@ -72,16 +76,21 @@ From that chain, derive the active production contract:
   - `canary-analysis.yaml`
   - `observability-handoff.yaml`
   - `analysis-handoff.yaml`
+  - `monitor-handoff.yaml`
   - `gitops-repo/tools/render_alert_policy.py`
   - `gitops-repo/tools/render_analysis_handoff.py`
+  - `gitops-repo/tools/render_monitor_handoff.py`
 - Missing prod files are expected here. Create them rather than patching generated live state.
 - The observability handoff files carry the alert receiver, monitor namespace, analysis window, SLO, and contract label into later rollout stages.
+- The monitor handoff ties the service monitor and the analysis lane together. It should carry the prod namespace, health path, interval, analysis template, receiver, and contract label.
+- The alerting and analysis stages actively validate the observability handoff, analysis handoff, monitor handoff, and both analysis/monitor renderers, so leaving those files stale will now stop the rollout instead of only lowering the grader.
 
 5. Traffic, mesh, and telemetry
 
 - Repair or create:
   - `traffic-policy.yaml`
   - `traffic-intent.yaml`
+  - `gateway-intent.yaml`
   - `route-contract.yaml`
   - `virtual-service.yaml`
   - `destination-rule.yaml`
@@ -89,10 +98,27 @@ From that chain, derive the active production contract:
   - `workload-intent.yaml`
   - `telemetry-policy.yaml`
   - `telemetry-handoff.yaml`
+  - `gitops-repo/tools/render_gateway_intent.py`
   - `gitops-repo/tools/render_mesh_policy.py`
   - `gitops-repo/tools/render_telemetry_policy.py`
 - Missing prod mesh files are expected here. Create them under the prod overlay.
 - These intent and handoff manifests are part of the durable prod contract. They must agree with the visible mesh and telemetry files on host, subsets, route prefix, propagation header, and contract label.
+- The gateway intent is the durable edge handoff. It must agree with the route contract on gateway host, class, route prefix, live path, propagation header, and contract label.
+- The traffic, mesh, and telemetry stages now validate these durable intent and handoff manifests directly, including the gateway-intent renderer. Fixing only the visible policy files is no longer enough for a healthy rollout.
+- For the mesh contract specifically:
+  - `destination-rule.yaml.host` and `mesh-intent.yaml.service_host` should be `<traffic_service>.prod.svc.cluster.local`
+  - subset entries are top-level objects with `name`, `lane`, and `track`
+  - the canary subset track should use the active promotion channel, not a guessed default like `stable`
+  - `render_mesh_policy.py` should emit the same host and subset objects that the durable mesh files declare
+
+## Common pitfalls
+
+- `burn-rate-alert.yaml` should use the same top-level key that the durable alert path expects. In this lab that key is `burn_rate_alert`, not a migration-era guessed alias.
+- `render_alert_policy.py` should read the durable burn-rate manifest and preserve the active receiver, metric source, and burn-rate windows from the prod contract.
+- `virtual-service.yaml`, `destination-rule.yaml`, and `mesh-intent.yaml` should agree on the prod mesh host: `<traffic_service>.prod.svc.cluster.local`.
+- Mesh subset objects are not nested `labels` maps in this task. They are durable top-level entries shaped like `{name, lane, track}`.
+- The canary track should reuse the active promotion channel value such as `hotfix`; do not substitute a generic track like `canary` or `stable`.
+- The mesh and telemetry helper scripts should mirror the durable intent files instead of rebuilding guessed defaults from only one visible manifest.
 
 ## Minimal success check
 

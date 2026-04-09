@@ -37,6 +37,7 @@ def release_contract(settings: Settings) -> dict[str, object]:
         "service": service["name"],
         "tracked_service": service["tracked_service"],
         "traffic_service": service["traffic_service"],
+        "contract_label": f"{lane_name}.{promotion_profile['channel']}.{service['name']}",
         "image_repository": f"{release_profile['registry_host']}/{service['image_repo']}",
         "required_runner_profile": release_profile["required_runner_profile"],
         "target_branch": release_profile["target_branch"],
@@ -75,5 +76,6 @@ def release_contract(settings: Settings) -> dict[str, object]:
         "propagation_header": traffic_profile["propagation_header"],
         "mesh_service_host": f"{service['traffic_service']}.prod.svc.cluster.local",
         "health_path": service["health_path"],
+        "live_path": f"prod/{service['name']}",
         "registry_auth_secret": "cluster/live/secrets/registry-robot.yaml",
     }

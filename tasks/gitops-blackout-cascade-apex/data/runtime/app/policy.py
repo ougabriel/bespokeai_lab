@@ -32,6 +32,25 @@ def verify_policy(settings: Settings, commit_sha: str) -> dict[str, object]:
             "message": "The prod safety policy never received a valid resilience handoff.",
         }
 
+    delivery_contract = load_yaml(gitops_root / contract["prod_overlay"] / "delivery-contract.yaml")["contract"]
+    if (
+        delivery_contract.get("lane") != contract["lane_name"]
+        or delivery_contract.get("channel") != contract["promotion_channel"]
+        or delivery_contract.get("mode") != contract["promotion_mode"]
+        or delivery_contract.get("target_overlay") != contract["prod_overlay"]
+        or delivery_contract.get("analysis_template") != contract["analysis_template"]
+        or delivery_contract.get("metric_source") != contract["metric_source"]
+        or delivery_contract.get("monitor_namespace") != contract["monitor_namespace"]
+        or delivery_contract.get("gateway_host") != contract["gateway_host"]
+        or delivery_contract.get("gateway_class") != contract["gateway_class"]
+        or delivery_contract.get("route_prefix") != contract["route_prefix"]
+        or delivery_contract.get("contract_label") != contract["contract_label"]
+    ):
+        return {
+            "status": "failed",
+            "message": "The prod delivery contract still does not match the active lane handoff.",
+        }
+
     window = load_yaml(gitops_root / contract["prod_overlay"] / "rollout-window.yaml")["window"]
     if window.get("lane") != contract["lane_name"]:
         return {

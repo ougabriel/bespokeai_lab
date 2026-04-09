@@ -18,13 +18,25 @@ Even when the build finishes, prod still does not end up serving the fresh versi
   - `alert-route.yaml`
   - `burn-rate-alert.yaml`
   - `canary-analysis.yaml`
+  - `observability-handoff.yaml`
+  - `analysis-handoff.yaml`
+  - `monitor-handoff.yaml`
   - `gitops-repo/tools/render_alert_policy.py`
+  - `gitops-repo/tools/render_analysis_handoff.py`
+  - `gitops-repo/tools/render_monitor_handoff.py`
 - The traffic and mesh files that must align to the active prod lane are:
   - `traffic-policy.yaml`
+  - `traffic-intent.yaml`
+  - `gateway-intent.yaml`
+  - `route-contract.yaml`
   - `virtual-service.yaml`
   - `destination-rule.yaml`
+  - `mesh-intent.yaml`
+  - `workload-intent.yaml`
   - `gitops-repo/tools/render_mesh_policy.py`
+- `gitops-repo/tools/render_gateway_intent.py`
 - The telemetry handoff for the prod lane must also align to the active observability and traffic profiles:
   - `telemetry-policy.yaml`
+  - `telemetry-handoff.yaml`
   - `gitops-repo/tools/render_telemetry_policy.py`
 - Some of these prod overlay resources are intentionally absent from the seed. Missing prod resources should be created rather than worked around in generated live state.

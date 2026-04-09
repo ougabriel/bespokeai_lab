@@ -37,6 +37,7 @@ def verify_mesh(settings: Settings, commit_sha: str) -> dict[str, object]:
         }
 
     virtual_service = load_yaml(virtual_service_path)["virtual_service"]
+    mesh_intent = load_yaml(gitops_root / contract["prod_overlay"] / "mesh-intent.yaml")["intent"]
     if virtual_service.get("gateway_host") != contract["gateway_host"]:
         return {
             "status": "failed",
@@ -78,6 +79,18 @@ def verify_mesh(settings: Settings, commit_sha: str) -> dict[str, object]:
         {"name": "stable", "lane": contract["lane_name"], "track": "stable"},
         {"name": "canary", "lane": contract["lane_name"], "track": contract["promotion_channel"]},
     ]
+    if (
+        mesh_intent.get("service") != contract["service"]
+        or mesh_intent.get("lane") != contract["lane_name"]
+        or mesh_intent.get("service_host") != contract["mesh_service_host"]
+        or mesh_intent.get("subsets") != expected_subsets
+        or mesh_intent.get("contract_label") != contract["contract_label"]
+    ):
+        return {
+            "status": "failed",
+            "message": "The durable mesh intent is still out of sync with the active prod lane.",
+        }
+
     if destination_rule.get("subsets") != expected_subsets:
         return {
             "status": "failed",
@@ -103,6 +116,7 @@ def verify_mesh(settings: Settings, commit_sha: str) -> dict[str, object]:
         rendered_mesh.get("gateway_host") != contract["gateway_host"]
         or rendered_mesh.get("service_host") != contract["mesh_service_host"]
         or rendered_mesh.get("subsets") != expected_subsets
+        or rendered_mesh.get("contract_label") != contract["contract_label"]
     ):
         return {
             "status": "failed",

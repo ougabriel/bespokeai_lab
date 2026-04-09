@@ -114,6 +114,9 @@ def verify_alerting(settings: Settings, commit_sha: str) -> dict[str, object]:
     if (
         rendered_policy.get("receiver") != contract["alert_receiver"]
         or rendered_policy.get("metric_source") != contract["metric_source"]
+        or rendered_policy.get("analysis_template") != contract["analysis_template"]
+        or rendered_policy.get("monitor_namespace") != contract["monitor_namespace"]
+        or rendered_policy.get("contract_label") != contract["contract_label"]
         or rendered_policy.get("burn_rate", {}).get("short_window") != contract["burn_rate_short_window"]
         or rendered_policy.get("burn_rate", {}).get("long_window") != contract["burn_rate_long_window"]
         or rendered_policy.get("burn_rate", {}).get("max_burn_rate") != contract["error_budget_burn_rate"]

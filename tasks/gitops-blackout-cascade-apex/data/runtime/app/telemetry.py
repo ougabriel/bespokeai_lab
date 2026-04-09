@@ -44,6 +44,7 @@ def verify_telemetry(settings: Settings, commit_sha: str) -> dict[str, object]:
         }
 
     telemetry = load_yaml(telemetry_path)["telemetry"]
+    telemetry_handoff = load_yaml(gitops_root / contract["prod_overlay"] / "telemetry-handoff.yaml")["handoff"]
     if telemetry.get("service") != contract["traffic_service"]:
         return {
             "status": "failed",
@@ -104,6 +105,22 @@ def verify_telemetry(settings: Settings, commit_sha: str) -> dict[str, object]:
             "message": "The telemetry policy still propagates the wrong lane value.",
         }
 
+    if (
+        telemetry_handoff.get("service") != contract["service"]
+        or telemetry_handoff.get("service_host") != contract["mesh_service_host"]
+        or telemetry_handoff.get("provider") != contract["telemetry_provider"]
+        or telemetry_handoff.get("metric_source") != contract["metric_source"]
+        or telemetry_handoff.get("gateway_class") != contract["gateway_class"]
+        or telemetry_handoff.get("route_prefix") != contract["route_prefix"]
+        or telemetry_handoff.get("propagation_header") != contract["propagation_header"]
+        or telemetry_handoff.get("propagation_value") != contract["lane_name"]
+        or telemetry_handoff.get("contract_label") != contract["contract_label"]
+    ):
+        return {
+            "status": "failed",
+            "message": "The telemetry handoff manifest is still using the wrong prod contract wiring.",
+        }
+
     tool_ok, rendered_telemetry, tool_error = run_json_tool(
         gitops_root / "tools" / "render_telemetry_policy.py",
         "--lab-root",
@@ -128,6 +145,8 @@ def verify_telemetry(settings: Settings, commit_sha: str) -> dict[str, object]:
         or rendered_telemetry.get("route_prefix") != contract["route_prefix"]
         or rendered_telemetry.get("lane") != contract["lane_name"]
         or rendered_telemetry.get("trace_sampling_percent") != contract["trace_sampling_percent"]
+        or rendered_telemetry.get("service_host") != contract["mesh_service_host"]
+        or rendered_telemetry.get("contract_label") != contract["contract_label"]
         or rendered_telemetry.get("propagation", {}).get("header") != contract["propagation_header"]
         or rendered_telemetry.get("propagation", {}).get("value") != contract["lane_name"]
     ):

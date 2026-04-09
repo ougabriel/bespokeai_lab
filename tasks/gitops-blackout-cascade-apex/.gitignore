@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
 report.json
+validation_reports/

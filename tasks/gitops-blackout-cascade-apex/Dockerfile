@@ -21,6 +21,8 @@ COPY grader.py /task/grader.py
 COPY setup.sh /task/setup.sh
 COPY solution.sh /task/solution.sh
 
-RUN chmod +x /task/setup.sh /task/solution.sh /task/data/runtime/bin/bootstrap_data.py /task/data/runtime/bin/run_server.py /task/data/runtime/bin/simulate_rollout.py /task/data/runtime/bin/task_entrypoint.sh
+RUN mkdir -p /mcp_server/tasks \
+    && ln -s /task /mcp_server/tasks/gitops-blackout-cascade-apex \
+    && chmod +x /task/setup.sh /task/solution.sh /task/data/runtime/bin/bootstrap_data.py /task/data/runtime/bin/run_server.py /task/data/runtime/bin/simulate_rollout.py /task/data/runtime/bin/task_entrypoint.sh
 
 ENTRYPOINT ["/task/data/runtime/bin/task_entrypoint.sh"]

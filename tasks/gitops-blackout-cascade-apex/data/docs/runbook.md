@@ -3,12 +3,12 @@
 The lab models the `nebula-api` hotfix path across a few directories:
 
 1. `app-repo/` contains the release lane, release metadata, service catalog, and the durable release handoff manifests.
-   It also contains the CI helper scripts that render the release bundle and release attestation used by the hotfix lane.
+   It also contains the CI helper scripts that render the release bundle, release attestation, and release witness used by the hotfix lane.
 2. `ops/identity/` contains the canonical production bot identity material.
 3. `ops/topology/` contains the active prod lane after the migration split.
 4. `ops/reference/` contains the canonical release, promotion, observability, and traffic profiles that the active lane now points at.
 5. `controllers/` contains the automation layer that writes GitOps changes.
-6. `gitops-repo/` contains the prod application, overlay, promotion policy, release gate, delivery contract, autoscaling and availability resources, rollout policy, burn-rate alert, canary analysis config, observability and analysis handoffs, alert route, traffic intent, route contract, service-mesh resources, workload intent, telemetry handoff policy, and the prod policy helper scripts.
+6. `gitops-repo/` contains the prod application, overlay, promotion policy, release gate, delivery contract, autoscaling and availability resources, rollout policy, burn-rate alert, canary analysis config, observability, analysis, and monitor handoffs, alert route, traffic and gateway intents, route contract, service-mesh resources, workload intent, telemetry handoff policy, and the prod policy helper scripts.
 7. `cluster/live/` contains the applied deployment, live secret, live route state, the reconciled mesh state, and the live telemetry handoff state.
 8. `infra/` contains reachability data for the internal control plane.
 
@@ -32,15 +32,15 @@ The active production contract comes from one chain of source-of-truth:
 Use that contract to keep the whole lane aligned across these areas:
 
 - CI contract:
-  runner config, release plan, service release metadata, release contract, release baton, release attestation, and the release helper scripts
+  runner config, release plan, service release metadata, release contract, release baton, release attestation, release witness, and the release helper scripts
 - Registry and updater contract:
   source-of-truth bot credentials plus updater auth, write-back target, write-back branch, and manifest path
 - GitOps promotion contract:
   Argo application, prod overlay values, release gate, promotion policy, rollout window, and delivery contract
 - Resilience and observability contract:
-  autoscaling, availability budget, service monitor, alert route, burn-rate policy, canary analysis, observability handoff, analysis handoff, the alert helper script, and the analysis handoff helper script
+  autoscaling, availability budget, service monitor, alert route, burn-rate policy, canary analysis, observability handoff, analysis handoff, monitor handoff, the alert helper script, and the analysis/monitor handoff helper scripts
 - Traffic, mesh, and telemetry contract:
-  traffic policy, traffic intent, route contract, virtual service, destination rule, mesh intent, workload intent, telemetry policy, telemetry handoff, the mesh helper script, and the telemetry helper script
+  traffic policy, traffic intent, gateway intent, route contract, virtual service, destination rule, mesh intent, workload intent, telemetry policy, telemetry handoff, the gateway-intent helper script, the mesh helper script, and the telemetry helper script
 
 The prod overlay is intentionally split between visible resources and durable handoff manifests.
 The visible resources drive the live rollout:
@@ -65,16 +65,27 @@ The handoff manifests carry the same contract into later rollout stages and help
 - `release-contract.yaml`
 - `release-baton.yaml`
 - `release-attestation.yaml`
+- `release-witness.yaml`
 - `delivery-contract.yaml`
 - `observability-handoff.yaml`
 - `analysis-handoff.yaml`
+- `monitor-handoff.yaml`
 - `traffic-intent.yaml`
+- `gateway-intent.yaml`
 - `route-contract.yaml`
 - `mesh-intent.yaml`
 - `workload-intent.yaml`
 - `telemetry-handoff.yaml`
 
 If the visible resources are fixed but the handoff manifests still point at the migration lane, bootstrap and the second rollout will drift back.
+The simulator also validates these handoff manifests inside the rollout stages themselves, so stale release, delivery, observability, analysis, traffic, mesh, workload, or telemetry handoffs will now stop the lane before it reaches a healthy second rollout.
+
+## Common repair pitfalls
+
+- `burn-rate-alert.yaml` is part of the durable prod contract. The alerting path expects the same top-level key and field names used by the active prod lane rather than a migration-era alias.
+- The alert, analysis, mesh, and telemetry renderers should mirror the durable handoff manifests. They should not reconstruct defaults like migration hosts, `stable` canary tracks, or legacy propagation headers.
+- Mesh subset entries in this lab are durable top-level `{name, lane, track}` objects, and the mesh service host should be `<traffic_service>.prod.svc.cluster.local`.
+- The active canary track comes from the promotion profile channel. If the promotion profile says `hotfix`, the mesh and route handoffs should keep `hotfix` instead of renaming it to `canary`.
 
 Some prod overlay resources are expected to be created during the repair if they are missing. The important requirement is that they match the active production profiles and survive a second rollout without drift.
 

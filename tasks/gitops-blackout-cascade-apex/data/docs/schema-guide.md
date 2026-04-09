@@ -29,12 +29,18 @@ The seeded files are grouped by responsibility:
   - `app-repo/services/nebula-api/release-attestation.yaml`
     Top-level key: `attestation`
     Important fields: `service`, `lane`, `target_branch`, `write_back_target`, `write_back_branch`, `image_repository`, `contract_label`
+  - `app-repo/services/nebula-api/release-witness.yaml`
+    Top-level key: `witness`
+    Important fields: `service`, `lane`, `target_overlay`, `live_path`, `gateway_host`, `contract_label`
   - `app-repo/ci/scripts/render_release_bundle.py`
     Must emit a bundle whose branch, channel, tag source, and image repository match the active release contract.
     Expected payload fields: `service`, `commit_sha`, `channel`, `tag_source`, `image_repository`, `target_branch`, `write_back_branch`, `tracked_service`, `traffic_service`, `target_overlay`, `health_path`, `contract_label`
   - `app-repo/ci/scripts/render_release_attestation.py`
     Must emit release attestation JSON whose service, lane, tracked service, branch, write-back target, image repository, and contract label match the active release contract.
     Expected payload fields: `service`, `lane`, `target_branch`, `write_back_target`, `write_back_branch`, `image_repository`, `tracked_service`, `contract_label`, `commit_sha`
+  - `app-repo/ci/scripts/render_release_witness.py`
+    Must emit release witness JSON whose service, lane, target overlay, live path, gateway host, tracked service, and contract label match the active release contract.
+    Expected payload fields: `service`, `lane`, `target_overlay`, `live_path`, `gateway_host`, `tracked_service`, `contract_label`, `commit_sha`
 
 - Registry and automation:
   - `ops/source-of-truth/registry-robot.yaml`
@@ -87,12 +93,18 @@ The seeded files are grouped by responsibility:
   - `analysis-handoff.yaml`
     Top-level key: `handoff`
     Important fields: `service`, `lane`, `analysis_template`, `window_minutes`, `success_rate_slo`, `metric_source`, `contract_label`
+  - `monitor-handoff.yaml`
+    Top-level key: `handoff`
+    Important fields: `service`, `lane`, `namespace`, `path`, `interval`, `analysis_template`, `receiver`, `contract_label`
   - `gitops-repo/tools/render_alert_policy.py`
     Must emit alert policy JSON that matches the active observability profile.
     Expected payload fields: `service`, `receiver`, `severity`, `metric_source`, `analysis_template`, `monitor_namespace`, `contract_label`, `burn_rate.short_window`, `burn_rate.long_window`, `burn_rate.max_burn_rate`
   - `gitops-repo/tools/render_analysis_handoff.py`
     Must emit JSON that combines the analysis handoff and observability handoff for the active lane.
     Expected payload fields: `service`, `lane`, `analysis_template`, `window_minutes`, `success_rate_slo`, `metric_source`, `receiver`, `severity`, `contract_label`, `commit_sha`
+  - `gitops-repo/tools/render_monitor_handoff.py`
+    Must emit JSON that combines the service monitor and the monitor handoff for the active lane.
+    Expected payload fields: `service`, `lane`, `namespace`, `path`, `interval`, `analysis_template`, `receiver`, `contract_label`, `commit_sha`
 
 - Traffic, mesh, and telemetry:
   - `traffic-policy.yaml`
@@ -101,6 +113,9 @@ The seeded files are grouped by responsibility:
   - `traffic-intent.yaml`
     Top-level key: `intent`
     Important fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `progressive_steps`, `contract_label`
+  - `gateway-intent.yaml`
+    Top-level key: `intent`
+    Important fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `live_path`, `propagation_header`, `contract_label`
   - `route-contract.yaml`
     Top-level key: `contract`
     Important fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `live_path`, `contract_label`
@@ -110,9 +125,16 @@ The seeded files are grouped by responsibility:
   - `destination-rule.yaml`
     Top-level key: `destination_rule`
     Important fields: `service`, `host`, `subsets`
+    `host` must match the active mesh service host: `<traffic_service>.prod.svc.cluster.local`
+    `subsets` must be a top-level list of objects shaped like `{name, lane, track}`
+    Expected subsets:
+    `{"name": "stable", "lane": <active_lane>, "track": "stable"}`
+    `{"name": "canary", "lane": <active_lane>, "track": <promotion_channel>}`
   - `mesh-intent.yaml`
     Top-level key: `intent`
     Important fields: `service`, `lane`, `service_host`, `subsets`, `contract_label`
+    `service_host` must reuse the same `<traffic_service>.prod.svc.cluster.local` value as the destination rule
+    `subsets` uses the same top-level `{name, lane, track}` schema as `destination-rule.yaml`
   - `workload-intent.yaml`
     Top-level key: `intent`
     Important fields: `service`, `lane`, `namespace`, `image_repository`, `health_path`, `live_path`, `contract_label`
@@ -125,6 +147,12 @@ The seeded files are grouped by responsibility:
   - `gitops-repo/tools/render_mesh_policy.py`
     Must emit mesh policy JSON whose host and subsets match the active traffic contract.
     Expected payload fields: `gateway_host`, `gateway_class`, `route_prefix`, `service`, `service_host`, `subsets`, `contract_label`
+    The renderer should mirror the durable mesh contract instead of rebuilding guessed defaults:
+    - `service_host` should match `destination-rule.yaml.host`
+    - `subsets` should preserve the durable top-level `{name, lane, track}` entries
+  - `gitops-repo/tools/render_gateway_intent.py`
+    Must emit gateway intent JSON whose edge metadata matches the active traffic contract.
+    Expected payload fields: `service`, `lane`, `gateway_host`, `gateway_class`, `route_prefix`, `live_path`, `propagation_header`, `contract_label`, `commit_sha`
   - `gitops-repo/tools/render_telemetry_policy.py`
     Must emit telemetry handoff JSON whose provider, propagation header, and lane value match the active traffic and observability contract.
     Expected payload fields: `service`, `namespace`, `provider`, `metric_source`, `gateway_class`, `route_prefix`, `lane`, `trace_sampling_percent`, `service_host`, `contract_label`, `propagation.header`, `propagation.value`

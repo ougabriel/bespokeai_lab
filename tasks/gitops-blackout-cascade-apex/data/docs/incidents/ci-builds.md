@@ -9,5 +9,11 @@ The hotfix release path has been unstable since the production lane split.
   - `app-repo/ci/runner.yaml`
   - `app-repo/ci/release-plan.yaml`
   - `app-repo/services/nebula-api/release.yaml`
+  - `app-repo/services/nebula-api/release-contract.yaml`
+  - `app-repo/services/nebula-api/release-baton.yaml`
+  - `app-repo/services/nebula-api/release-attestation.yaml`
+  - `app-repo/services/nebula-api/release-witness.yaml`
   - `app-repo/ci/scripts/render_release_bundle.py`
-- The bundle renderer is part of the contract: it must emit prod hotfix bundle data that matches the active release lane instead of the old migration lane.
+  - `app-repo/ci/scripts/render_release_attestation.py`
+  - `app-repo/ci/scripts/render_release_witness.py`
+- The release helper scripts are part of the contract: they must emit prod hotfix bundle, attestation, and witness data that match the active release lane instead of the old migration lane.

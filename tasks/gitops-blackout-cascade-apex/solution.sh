@@ -118,6 +118,54 @@ if __name__ == "__main__":
     main()
 EOF
 
+cat <<'EOF' > /app/data/lab_seed/app-repo/ci/scripts/render_release_witness.py
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import yaml
+
+
+def load_yaml(path: Path) -> dict[str, object]:
+    with path.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lab-root", required=True)
+    parser.add_argument("--service", required=True)
+    parser.add_argument("--commit-sha", required=True)
+    args = parser.parse_args()
+
+    lab_root = Path(args.lab_root)
+    witness = load_yaml(
+        lab_root / "app-repo" / "services" / args.service / "release-witness.yaml"
+    )["witness"]
+    release_contract = load_yaml(
+        lab_root / "app-repo" / "services" / args.service / "release-contract.yaml"
+    )["contract"]
+
+    payload = {
+      "service": witness["service"],
+      "lane": witness["lane"],
+      "target_overlay": witness["target_overlay"],
+      "live_path": witness["live_path"],
+      "gateway_host": witness["gateway_host"],
+      "tracked_service": release_contract["tracked_service"],
+      "contract_label": witness["contract_label"],
+      "commit_sha": args.commit_sha,
+    }
+    print(json.dumps(payload))
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
 cat <<'EOF' > /app/data/lab_seed/app-repo/services/nebula-api/release.yaml
 service: nebula-api
 branch: main
@@ -158,6 +206,16 @@ attestation:
   write_back_target: gitops-repo
   write_back_branch: main
   image_repository: registry.internal.devops/platform/nebula-api
+  contract_label: prod-eu.hotfix.nebula-api
+EOF
+
+cat <<'EOF' > /app/data/lab_seed/app-repo/services/nebula-api/release-witness.yaml
+witness:
+  service: nebula-api
+  lane: prod-eu
+  target_overlay: services/nebula-api/overlays/prod
+  live_path: prod/nebula-api
+  gateway_host: edge.prod.internal.devops
   contract_label: prod-eu.hotfix.nebula-api
 EOF
 
@@ -278,6 +336,18 @@ handoff:
   window_minutes: 15
   success_rate_slo: 99.5
   metric_source: prod-prometheus
+  contract_label: prod-eu.hotfix.nebula-api
+EOF
+
+cat <<'EOF' > /app/data/lab_seed/gitops-repo/services/nebula-api/overlays/prod/monitor-handoff.yaml
+handoff:
+  service: nebula-api
+  lane: prod-eu
+  namespace: observability-prod
+  path: /internal/ready
+  interval: 30s
+  analysis_template: prod-error-budget
+  receiver: prod-platform-pager
   contract_label: prod-eu.hotfix.nebula-api
 EOF
 
@@ -403,6 +473,52 @@ if __name__ == "__main__":
     main()
 EOF
 
+cat <<'EOF' > /app/data/lab_seed/gitops-repo/tools/render_monitor_handoff.py
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import yaml
+
+
+def load_yaml(path: Path) -> dict[str, object]:
+    with path.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lab-root", required=True)
+    parser.add_argument("--service", required=True)
+    parser.add_argument("--commit-sha", required=True)
+    args = parser.parse_args()
+
+    lab_root = Path(args.lab_root)
+    overlay = lab_root / "gitops-repo" / "services" / args.service / "overlays" / "prod"
+    monitor = load_yaml(overlay / "service-monitor.yaml")["monitor"]
+    handoff = load_yaml(overlay / "monitor-handoff.yaml")["handoff"]
+
+    payload = {
+      "service": handoff["service"],
+      "lane": handoff["lane"],
+      "namespace": handoff["namespace"],
+      "path": monitor["path"],
+      "interval": monitor["interval"],
+      "analysis_template": handoff["analysis_template"],
+      "receiver": handoff["receiver"],
+      "contract_label": handoff["contract_label"],
+      "commit_sha": args.commit_sha,
+    }
+    print(json.dumps(payload))
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
 cat <<'EOF' > /app/data/lab_seed/gitops-repo/services/nebula-api/overlays/prod/burn-rate-alert.yaml
 burn_rate_alert:
   service: nebula-api
@@ -438,6 +554,18 @@ intent:
     - 10
     - 50
     - 100
+  contract_label: prod-eu.hotfix.nebula-api
+EOF
+
+cat <<'EOF' > /app/data/lab_seed/gitops-repo/services/nebula-api/overlays/prod/gateway-intent.yaml
+intent:
+  service: nebula-api
+  lane: prod-eu
+  gateway_host: edge.prod.internal.devops
+  gateway_class: internal-mesh
+  route_prefix: /nebula-api
+  live_path: prod/nebula-api
+  propagation_header: x-nebula-lane
   contract_label: prod-eu.hotfix.nebula-api
 EOF
 
@@ -566,6 +694,51 @@ def main() -> None:
       "service_host": destination_rule["host"],
       "subsets": destination_rule["subsets"],
       "contract_label": delivery_contract["contract_label"],
+    }
+    print(json.dumps(payload))
+
+
+if __name__ == "__main__":
+    main()
+EOF
+
+cat <<'EOF' > /app/data/lab_seed/gitops-repo/tools/render_gateway_intent.py
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import yaml
+
+
+def load_yaml(path: Path) -> dict[str, object]:
+    with path.open("r", encoding="utf-8") as handle:
+        return yaml.safe_load(handle)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lab-root", required=True)
+    parser.add_argument("--service", required=True)
+    parser.add_argument("--commit-sha", required=True)
+    args = parser.parse_args()
+
+    lab_root = Path(args.lab_root)
+    overlay = lab_root / "gitops-repo" / "services" / args.service / "overlays" / "prod"
+    gateway_intent = load_yaml(overlay / "gateway-intent.yaml")["intent"]
+
+    payload = {
+      "service": gateway_intent["service"],
+      "lane": gateway_intent["lane"],
+      "gateway_host": gateway_intent["gateway_host"],
+      "gateway_class": gateway_intent["gateway_class"],
+      "route_prefix": gateway_intent["route_prefix"],
+      "live_path": gateway_intent["live_path"],
+      "propagation_header": gateway_intent["propagation_header"],
+      "contract_label": gateway_intent["contract_label"],
+      "commit_sha": args.commit_sha,
     }
     print(json.dumps(payload))
 

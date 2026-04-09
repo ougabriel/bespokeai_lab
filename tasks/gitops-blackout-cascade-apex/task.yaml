@@ -33,19 +33,27 @@ prompt: |
     - `app-repo/services/nebula-api/release-contract.yaml`
     - `app-repo/services/nebula-api/release-baton.yaml`
     - `app-repo/services/nebula-api/release-attestation.yaml`
+    - `app-repo/services/nebula-api/release-witness.yaml`
     - `app-repo/ci/scripts/render_release_bundle.py`
     - `app-repo/ci/scripts/render_release_attestation.py`
+    - `app-repo/ci/scripts/render_release_witness.py`
     - `gitops-repo/services/nebula-api/overlays/prod/delivery-contract.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/observability-handoff.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/analysis-handoff.yaml`
+    - `gitops-repo/services/nebula-api/overlays/prod/monitor-handoff.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/traffic-intent.yaml`
+    - `gitops-repo/services/nebula-api/overlays/prod/gateway-intent.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/route-contract.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/mesh-intent.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/workload-intent.yaml`
     - `gitops-repo/services/nebula-api/overlays/prod/telemetry-handoff.yaml`
     - `gitops-repo/tools/render_analysis_handoff.py`
+    - `gitops-repo/tools/render_monitor_handoff.py`
+    - `gitops-repo/tools/render_gateway_intent.py`
     - `gitops-repo/tools/render_mesh_policy.py`
     - `gitops-repo/tools/render_telemetry_policy.py`
+  - For the mesh contract, use the schema documented in `/app/data/docs/schema-guide.md`:
+    subset entries are top-level `{name, lane, track}` objects and `service_host` is `<traffic_service>.prod.svc.cluster.local`.
   - Repair the seeded files under `/app/data/lab_seed`.
   - Some prod overlay resources are intentionally missing from the seed. Create them when the active contract requires them.
   - Verify the repair by rerunning bootstrap and then running the two hotfix rollout commands back to back.
