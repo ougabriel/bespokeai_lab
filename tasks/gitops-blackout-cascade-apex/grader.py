@@ -54,6 +54,22 @@ def build_feedback(payload: dict[str, object], stderr: str, returncode: int) -> 
         fatal_error = details.get("fatal_error")
         if fatal_error:
             parts.append(f"fatal_error: {fatal_error}")
+        raw_scores = details.get("raw_objective_scores", {})
+        if isinstance(raw_scores, dict):
+            first_raw = raw_scores.get("first_hotfix_rollout")
+            second_raw = raw_scores.get("second_hotfix_convergence")
+            if isinstance(first_raw, (int, float)):
+                parts.append(f"first_hotfix_raw={float(first_raw):.3f}")
+            if isinstance(second_raw, (int, float)):
+                parts.append(f"second_hotfix_raw={float(second_raw):.3f}")
+        gate_inputs = details.get("objective_gate_inputs", {})
+        if isinstance(gate_inputs, dict):
+            first_durable = gate_inputs.get("first_rollout_durability_score")
+            second_durable = gate_inputs.get("second_rollout_durability_score")
+            if isinstance(first_durable, (int, float)):
+                parts.append(f"first_hotfix_durable={float(first_durable):.3f}")
+            if isinstance(second_durable, (int, float)):
+                parts.append(f"second_hotfix_durable={float(second_durable):.3f}")
         objective_checks = details.get("objective_checks", {})
         if isinstance(objective_checks, dict):
             first = objective_checks.get("first_hotfix_rollout", {})

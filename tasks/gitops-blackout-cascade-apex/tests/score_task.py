@@ -1806,6 +1806,7 @@ def main() -> None:
             objective_thresholds["first_hotfix_rollout"],
             required=[
                 stage_ratio(first_report) >= 0.92,
+                first_rollout_durability_score >= 0.32,
             ],
         )
         objective_scores["second_hotfix_convergence"] = binary_pass(
@@ -1814,6 +1815,7 @@ def main() -> None:
             required=[
                 stage_ratio(second_report) >= 0.92,
                 stable_ratio >= 0.95,
+                second_rollout_durability_score >= 0.28,
             ],
         )
 
